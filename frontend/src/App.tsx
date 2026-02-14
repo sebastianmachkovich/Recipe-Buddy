@@ -20,7 +20,7 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex flex-col">
+    <div className="min-h-screen bg-linear-to-br from-indigo-500 via-purple-500 to-pink-500 flex flex-col">
       <header className="text-center py-12 px-8 bg-black/20 text-white">
         <h1 className="text-5xl font-bold mb-2">🍳 Recipe Buddy</h1>
         <p className="text-xl opacity-95">Clean slate - Ready to build!</p>
