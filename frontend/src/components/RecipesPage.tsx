@@ -15,6 +15,7 @@ import {
 } from "@/lib/state";
 import { useAtom } from "jotai";
 import { atom } from "jotai";
+import { useMemo } from "react";
 
 const recipes: RecipeCardData[] = [
   {
@@ -109,22 +110,10 @@ function AddRecipeCard() {
 }
 
 function RecipeCard({ recipe }: { recipe: RecipeCardData }) {
-  const [isRecipeOnCounter, setIsRecipeOnCounter] = useAtom(
-    atom(
-      (get) =>
-        get(recipesOnCounterAtom).find((r) => r.id === recipe.id) !== undefined,
-      (get, set, newValue) => {
-        const recipesOnCounter = get(recipesOnCounterAtom);
-        if (newValue) {
-          set(recipesOnCounterAtom, [...recipesOnCounter, recipe]);
-        } else {
-          set(
-            recipesOnCounterAtom,
-            recipesOnCounter.filter((r) => r.id !== recipe.id),
-          );
-        }
-      },
-    ),
+  const [recipesOnCounter, setRecipesOnCounter] = useAtom(recipesOnCounterAtom);
+  const isRecipeOnCounter = useMemo(
+    () => recipesOnCounter.includes(recipe),
+    [recipesOnCounter, recipe],
   );
   return (
     <Card className="h-full flex flex-col pt-0 overflow-hidden">
@@ -153,7 +142,9 @@ function RecipeCard({ recipe }: { recipe: RecipeCardData }) {
             variant="default"
             size="lg"
             className="ml-auto"
-            onClick={() => setIsRecipeOnCounter(false)}
+            onClick={() =>
+              setRecipesOnCounter(recipesOnCounter.filter((r) => r !== recipe))
+            }
           >
             <Check className="h-4 w-4 mr-2" />
             Cook
@@ -163,7 +154,7 @@ function RecipeCard({ recipe }: { recipe: RecipeCardData }) {
             variant="default"
             size="lg"
             className="ml-auto"
-            onClick={() => setIsRecipeOnCounter(true)}
+            onClick={() => setRecipesOnCounter([...recipesOnCounter, recipe])}
           >
             <PlusIcon className="h-4 w-4 mr-2" />
             Cook
