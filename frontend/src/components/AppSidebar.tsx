@@ -28,8 +28,7 @@ const sidebarItems: SidebarItem[] = [
 ];
 
 export default function AppSidebar() {
-  const [activeItem, setActiveItem] = useAtom(tabAtom);
-
+  const [tab, setTab] = useAtom(tabAtom);
   return (
     <Sidebar collapsible="icon" variant="sidebar" className="group">
       <SidebarContent className="flex flex-col gap-2">
@@ -39,9 +38,9 @@ export default function AppSidebar() {
               {sidebarItems.map((item) => (
                 <SidebarMenuItem key={item.tab}>
                   <SidebarMenuButton
-                    isActive={item.tab === activeItem}
+                    isActive={item.tab === tab}
                     tooltip={item.tab}
-                    onClick={() => setActiveItem(item.tab)}
+                    onClick={() => setTab(item.tab)}
                   >
                     {item.icon}
                     <span className="truncate">{item.tab}</span>
