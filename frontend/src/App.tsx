@@ -15,10 +15,14 @@ export function App() {
       <TooltipProvider>
         <SidebarProvider defaultOpen={false}>
           <AppSidebar />
-          <SidebarInset>
-            {tab === Tab.Home ? <ComponentExample /> : <RecipesPage />}
+          <SidebarInset className="flex flex-row overflow-hidden">
+            <SidebarProvider defaultOpen={true}>
+              <main className="flex-1 overflow-y-auto p-4">
+                {tab === Tab.Home ? <ComponentExample /> : <RecipesPage />}
+              </main>
+              <CounterSidebar />
+            </SidebarProvider>
           </SidebarInset>
-          <CounterSidebar />
         </SidebarProvider>
       </TooltipProvider>
     </ThemeProvider>
