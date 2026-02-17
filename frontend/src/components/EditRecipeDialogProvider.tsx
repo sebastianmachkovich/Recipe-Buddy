@@ -134,6 +134,8 @@ export default function EditRecipeDialogProvider({
     }
   }
 
+  const [isImageHovered, setIsImageHovered] = useState(false);
+
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -143,13 +145,42 @@ export default function EditRecipeDialogProvider({
             <DialogTitle>Edit Recipe</DialogTitle>
           </VisuallyHidden.Root>
           {recipe ? (
-            <img
-              src={recipe.imgUrl}
-              alt={recipe.title}
-              className="aspect-[4/3] w-[calc(100%+3rem)] max-w-none object-cover -mx-6 -mt-6 mb-4 rounded-t-lg"
-            />
+            <div
+              className="group relative aspect-[4/3] w-[calc(100%+3rem)] max-w-none
+    -mx-6 -mt-6 mb-4 rounded-t-lg
+    flex flex-col items-center justify-center gap-2
+    text-muted-foreground transition-colors
+    cursor-pointer overflow-hidden"
+              style={{
+                backgroundImage: `url(${recipe.imgUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+              onMouseEnter={() => setIsImageHovered(true)}
+              onMouseLeave={() => setIsImageHovered(false)}
+            >
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/70 transition-colors duration-200" />
+              {isImageHovered ? (
+                <>
+                  <UploadIcon className="relative z-10 h-12 w-12" />
+                  <span className="relative z-10 text-sm font-medium">
+                    Upload Image
+                  </span>
+                </>
+              ) : (
+                <></>
+              )}
+            </div>
           ) : (
-            <div className="aspect-[4/3] w-[calc(100%+3rem)] max-w-none flex flex-col items-center justify-center gap-2 text-muted-foreground border-2 -mx-6 -mt-6 mb-4 rounded-t-lg cursor-pointer hover:bg-accent/50 transition-colors">
+            <div
+              className="
+                aspect-[4/3] w-[calc(100%+3rem)] max-w-none
+                -mx-6 -mt-6 mb-4 rounded-t-lg
+                flex flex-col items-center justify-center gap-2
+                text-muted-foreground border-2 transition-colors
+                cursor-pointer hover:bg-accent/50
+                "
+            >
               <UploadIcon className="h-12 w-12" />
               <span className="text-sm font-medium">Upload Image</span>
             </div>
