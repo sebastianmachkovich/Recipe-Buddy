@@ -9,14 +9,19 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { recipesOnCounterAtom } from "@/lib/state";
+import { recipesAtom, recipeIdsOnCounterAtom } from "@/lib/state";
 import { Button } from "./ui/button";
 import { X } from "lucide-react";
-import { useAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import EditRecipeDialogProvider from "./EditRecipeDialogProvider";
 
 export default function CounterSidebar() {
-  const [recipesOnCounter, setRecipesOnCounter] = useAtom(recipesOnCounterAtom);
+  const recipes = useAtomValue(recipesAtom);
+  const recipeIdsOnCounter = useAtomValue(recipeIdsOnCounterAtom);
+  const setRecipeIdsOnCounter = useSetAtom(recipeIdsOnCounterAtom);
+  const recipesOnCounter = recipeIdsOnCounter
+    .map((id) => recipes.find((r) => r.id === id)!)
+    .filter(Boolean);
   return (
     <Sidebar
       collapsible="icon"
@@ -29,7 +34,7 @@ export default function CounterSidebar() {
           <SidebarGroupLabel>Plan</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {recipesOnCounter.map((item, i) => (
+              {recipesOnCounter.map((item) => (
                 <SidebarMenuItem key={item.id}>
                   <EditRecipeDialogProvider recipe={item}>
                     <SidebarMenuButton>
@@ -39,13 +44,11 @@ export default function CounterSidebar() {
                         variant="ghost"
                         size="icon-lg"
                         className="ml-auto transition-colors rounded-sm dark:hover:bg-[#403b3a]"
-                        onClick={() => {
-                          setRecipesOnCounter(
-                            recipesOnCounter
-                              .slice(0, i)
-                              .concat(recipesOnCounter.slice(i + 1)),
-                          );
-                        }}
+                        onClick={() =>
+                          setRecipeIdsOnCounter((ids) =>
+                            ids.filter((id) => id !== item.id)
+                          )
+                        }
                       >
                         <X className="h-6 w-6" />
                       </Button>

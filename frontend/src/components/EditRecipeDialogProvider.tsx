@@ -2,292 +2,154 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import { Field, FieldLabel } from "./ui/field";
-import { Input } from "./ui/input";
-import type { Ingredient, RecipeCardData } from "@/lib/state";
-import { IngredientUnit } from "@/lib/state";
-import { Textarea } from "./ui/textarea";
-import { GripVerticalIcon, Trash, UploadIcon, X } from "lucide-react";
 import { Button } from "./ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  defaultAnimateLayoutChanges,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { recipesAtom, type RecipeCardData } from "@/lib/state";
+import { useAtom } from "jotai";
 import { useState } from "react";
-import { VisuallyHidden } from "radix-ui";
-
-type IngredientEditInputProps = {
-  ingredient: Ingredient;
-};
-
-function IngredientEditInput({ ingredient }: IngredientEditInputProps) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({
-      id: ingredient.id,
-      animateLayoutChanges: (args) =>
-        defaultAnimateLayoutChanges({ ...args, wasDragging: true }),
-    });
-
-  return (
-    <div
-      className="flex h-9 w-full items-center rounded-md border border-input bg-transparent dark:bg-input/30 shadow-sm"
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-      }}
-    >
-      <GripVerticalIcon className="h-4 w-4" />
-      <input
-        type="number"
-        step="any"
-        placeholder="1"
-        defaultValue={ingredient.amount}
-        className="h-full w-16 rounded-l-md border-0 bg-transparent px-3 text-sm outline-none focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-      />
-      <div className="h-5 w-px bg-border" />
-      <Select>
-        <SelectTrigger className="h-full w-20 rounded-none border-0 bg-transparent dark:bg-transparent px-3 text-sm outline-none focus:ring-0 shadow-none ">
-          <SelectValue placeholder="unit" />
-        </SelectTrigger>
-        <SelectContent>
-          {Object.values(IngredientUnit).map((unit) => (
-            <SelectItem key={unit} value={unit}>
-              {unit}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <div className="h-5 w-px bg-border" />
-      <input
-        type="text"
-        placeholder="Ingredient Name"
-        className="h-full flex-1 rounded-r-md border-0 bg-transparent px-3 text-sm outline-none focus-visible:ring-0"
-        defaultValue={ingredient.name}
-      />
-      <Button variant="ghost" size="icon-sm">
-        <X className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-}
-
-function PlainTextIngredientInput() {
-  // TODO: This will need to grab the text, fire it off to Gemini when it
-  //       looses focus, and update the ingredients array with the resulting
-  //       JSON object. (Or maybe when you hit enter?)
-  return <Input type="text" placeholder="Enter ingredient info." />;
-}
-
-type EditRecipeDialogProviderProps = {
-  children: React.ReactNode;
-  recipe?: RecipeCardData;
-};
+import ErrableTextInputField from "./ErrableTextInputField";
+import { ReorderableInputField } from "./ReorderableInput";
+import { deepCopyRecipe } from "@/lib/utils";
+import { DeleteRecipeButton } from "./DeleteRecipeButton";
+import { UploadImageHeader } from "./UploadImageHeader";
 
 export default function EditRecipeDialogProvider({
   children,
   recipe,
-}: EditRecipeDialogProviderProps) {
-  const [items, setItems] = useState<Ingredient[]>(recipe?.ingredients ?? []);
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor),
-  );
+}: {
+  children: React.ReactNode;
+  recipe?: RecipeCardData;
+}) {
+  // Observes whether the dialog is open.  Needed because we use a <DialogTrigger>
+  // to open the it, rather than a prop.
+  const [open, setOpen] = useState(false);
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
+  // The recipes list.  Needed for updating on submit.
+  const [recipes, setRecipes] = useAtom(recipesAtom);
 
-    if (over && active.id !== over.id) {
-      setItems((items) => {
-        const oldIndex = items.findIndex((i) => i.id === active.id);
-        const newIndex = items.findIndex((i) => i.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
+  // A copy of the recipe that gets edited in the dialog.  Overwrites the
+  // original recipe when the dialog is closed with the submit button.  It is
+  // null when the "Add Recipe" button opens the dialog.
+  const [editedRecipe, setEditedRecipe] = useState<RecipeCardData | null>(null);
+
+  // Error states for the form fields.
+  const [titleError, setTitleError] = useState(false);
+  const [descriptionError, setDescriptionError] = useState(false);
+
+  // Opens the dialog if the trigger is clicked.
+  function handleOpenChange(newOpen: boolean) {
+    if (newOpen) {
+      // Resets all state local to the component.
+      const newId = Math.max(0, ...recipes.map((it) => it.id)) + 1;
+      setEditedRecipe(deepCopyRecipe(recipe, newId));
+      setTitleError(false);
+      setDescriptionError(false);
     }
+    setOpen(newOpen);
   }
 
-  const [isImageHovered, setIsImageHovered] = useState(false);
+  function handleSubmit() {
+    if (!editedRecipe) return;
+
+    // Does basic input validation.
+    let hasErrors = false;
+    if (!editedRecipe.title) {
+      setTitleError(true);
+      hasErrors = true;
+    }
+    if (!editedRecipe.description) {
+      setDescriptionError(true);
+      hasErrors = true;
+    }
+    if (hasErrors) return;
+
+    // Updates the recipe in the list if it exists, or creates a new one and
+    // appends it to the list.
+    if (recipe) {
+      setRecipes((prev) =>
+        prev.map((it) => (it.id === recipe.id ? editedRecipe : it)),
+      );
+    } else {
+      setRecipes((prev) => [...prev, editedRecipe]);
+    }
+
+    // Manually closes the dialog.
+    setOpen(false);
+  }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <VisuallyHidden.Root asChild>
-            <DialogTitle>Edit Recipe</DialogTitle>
-          </VisuallyHidden.Root>
-          {recipe ? (
-            <div
-              className="group relative aspect-[4/3] w-[calc(100%+3rem)] max-w-none
-    -mx-6 -mt-6 mb-4 rounded-t-lg
-    flex flex-col items-center justify-center gap-2
-    text-muted-foreground transition-colors
-    cursor-pointer overflow-hidden"
-              style={{
-                backgroundImage: `url(${recipe.imgUrl})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-              onMouseEnter={() => setIsImageHovered(true)}
-              onMouseLeave={() => setIsImageHovered(false)}
-            >
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/70 transition-colors duration-200" />
-              {isImageHovered ? (
-                <>
-                  <UploadIcon className="relative z-10 h-12 w-12" />
-                  <span className="relative z-10 text-sm font-medium">
-                    Upload Image
-                  </span>
-                </>
-              ) : (
-                <></>
-              )}
-            </div>
-          ) : (
-            <div
-              className="
-                aspect-[4/3] w-[calc(100%+3rem)] max-w-none
-                -mx-6 -mt-6 mb-4 rounded-t-lg
-                flex flex-col items-center justify-center gap-2
-                text-muted-foreground border-2 transition-colors
-                cursor-pointer hover:bg-accent/50
-                "
-            >
-              <UploadIcon className="h-12 w-12" />
-              <span className="text-sm font-medium">Upload Image</span>
-            </div>
-          )}
-        </DialogHeader>
-        <div className="flex flex-col gap-3">
-          <Field>
-            <FieldLabel htmlFor="edit-recipe-title">Name</FieldLabel>
-            <Input
+      {open && editedRecipe && (
+        <DialogContent>
+          <UploadImageHeader
+            editedRecipe={editedRecipe}
+            setEditedRecipe={setEditedRecipe}
+          />
+          <div className="flex flex-col gap-3">
+            <ErrableTextInputField
+              kind="input"
               id="edit-recipe-title"
+              description="Name"
               placeholder="Something Delicious"
-              defaultValue={recipe?.title}
+              value={editedRecipe.title}
+              onChange={(e) =>
+                setEditedRecipe((prev) =>
+                  prev ? { ...prev, title: e.target.value } : prev,
+                )
+              }
+              hasError={titleError}
+              errorMsg="Title Required"
             />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="edit-recipe-description">
-              Description
-            </FieldLabel>
-            <Textarea
+            <ErrableTextInputField
+              kind="textarea"
               id="edit-recipe-description"
+              description="Description"
               placeholder="Its flavor was good, but it calls for too much lemon."
-              defaultValue={recipe?.description}
+              value={editedRecipe.description}
+              onChange={(e) =>
+                setEditedRecipe((prev) =>
+                  prev ? { ...prev, description: e.target.value } : prev,
+                )
+              }
+              hasError={descriptionError}
+              errorMsg="Description Required"
             />
-          </Field>
-          <Field>
-            <FieldLabel>Ingredients</FieldLabel>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={recipe?.ingredients.map((it) => it.id) ?? []}
-                strategy={verticalListSortingStrategy}
-              >
-                {items.map((ingredient) => (
-                  <IngredientEditInput
-                    key={ingredient.id}
-                    ingredient={ingredient}
-                  />
-                )) ?? []}
-              </SortableContext>
-            </DndContext>
-            <PlainTextIngredientInput />
-          </Field>
-        </div>
-        <DialogFooter className="pt-6">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="mr-auto">
-                <Trash className="h-4 w-4" />
+            <ReorderableInputField
+              label="Ingredients"
+              editedRecipe={editedRecipe}
+              setEditedRecipe={setEditedRecipe}
+              arrKey="ingredients"
+            />
+            {/* TODO: Add plain text ingredient input */}
+            <ReorderableInputField
+              label="Steps"
+              editedRecipe={editedRecipe}
+              setEditedRecipe={setEditedRecipe}
+              arrKey="steps"
+            />
+            {/* TODO: Add plain text step input */}
+          </div>
+          <DialogFooter className="pt-6">
+            {recipe && (
+              <DeleteRecipeButton
+                editedRecipe={editedRecipe}
+                setOpen={setOpen}
+              />
+            )}
+            <DialogClose asChild>
+              <Button variant="outline" size="sm">
+                Cancel
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold">
-                  Delete {recipe?.title ?? "Recipe"}
-                </DialogTitle>
-                <DialogDescription>
-                  Are you sure you want to delete this recipe?
-                </DialogDescription>
-                <DialogFooter className="pt-2">
-                  <DialogClose asChild>
-                    <Button variant="outline" size="sm">
-                      Cancel
-                    </Button>
-                  </DialogClose>
-                  <DialogClose asChild>
-                    <Button variant="destructive" size="sm">
-                      Delete
-                    </Button>
-                  </DialogClose>
-                </DialogFooter>
-              </DialogHeader>
-            </DialogContent>
-          </Dialog>
-          <DialogClose asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              // TODO: Real state management.  This is awful.
-              //       The problem is that the component caches the items
-              //       list, so it stores the changed order when you click
-              //       Cancel.  We do this to sync its state with the actual
-              //       ingredients array.
-              onClick={() => setItems(recipe?.ingredients ?? [])}
-            >
-              Cancel
-            </Button>
-          </DialogClose>
-          <DialogClose asChild>
-            <Button
-              variant="default"
-              size="sm"
-              // TODO: Ditto.  This syncs the ingredients array to the cached
-              //       items list.
-              onClick={() => {
-                if (recipe && items.length > 0) {
-                  recipe.ingredients = items;
-                }
-              }}
-            >
+            </DialogClose>
+            <Button variant="default" size="sm" onClick={handleSubmit}>
               Submit
             </Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
+          </DialogFooter>
+        </DialogContent>
+      )}
     </Dialog>
   );
 }
