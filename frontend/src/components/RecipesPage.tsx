@@ -31,10 +31,6 @@ function AddRecipeCard() {
 }
 
 function RecipeCard({ recipe }: { recipe: RecipeCardData }) {
-  const [recipeIdsOnCounter, setRecipeIdsOnCounter] = useAtom(
-    recipeIdsOnCounterAtom,
-  );
-  const isRecipeOnCounter = recipeIdsOnCounter.includes(recipe.id);
   return (
     <Card className="h-full flex flex-col pt-0 overflow-hidden select-none">
       <img
@@ -51,41 +47,52 @@ function RecipeCard({ recipe }: { recipe: RecipeCardData }) {
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-card to-transparent" />
         </div>
       </CardHeader>
-      <CardFooter className="mt-auto flex justify-start gap-2">
-        <EditRecipeDialogProvider recipe={recipe}>
-          <Button variant="outline" size="lg">
-            <PencilIcon className="h-4 w-4" />
-          </Button>
-        </EditRecipeDialogProvider>
-        {isRecipeOnCounter ? (
-          <Button
-            variant="default"
-            size="lg"
-            className="ml-auto"
-            onClick={() =>
-              setRecipeIdsOnCounter(
-                recipeIdsOnCounter.filter((id) => id !== recipe.id),
-              )
-            }
-          >
-            <Check className="h-4 w-4 mr-2" />
-            Cooking
-          </Button>
-        ) : (
-          <Button
-            variant="default"
-            size="lg"
-            className="ml-auto"
-            onClick={() =>
-              setRecipeIdsOnCounter([...recipeIdsOnCounter, recipe.id])
-            }
-          >
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Cook
-          </Button>
-        )}
-      </CardFooter>
+      <RecipeCardFooter recipe={recipe} />
     </Card>
+  );
+}
+
+export function RecipeCardFooter({ recipe }: { recipe: RecipeCardData }) {
+  const [recipeIdsOnCounter, setRecipeIdsOnCounter] = useAtom(
+    recipeIdsOnCounterAtom,
+  );
+  const isRecipeOnCounter = recipeIdsOnCounter.includes(recipe.id);
+
+  return (
+    <CardFooter className="w-full flex justify-start gap-2">
+      <EditRecipeDialogProvider recipe={recipe}>
+        <Button variant="outline" size="lg">
+          <PencilIcon className="h-4 w-4" />
+        </Button>
+      </EditRecipeDialogProvider>
+      {isRecipeOnCounter ? (
+        <Button
+          variant="default"
+          size="lg"
+          className="ml-auto"
+          onClick={() =>
+            setRecipeIdsOnCounter(
+              recipeIdsOnCounter.filter((id) => id !== recipe.id),
+            )
+          }
+        >
+          <Check className="h-4 w-4 mr-2" />
+          Cooking
+        </Button>
+      ) : (
+        <Button
+          variant="default"
+          size="lg"
+          className="ml-auto"
+          onClick={() =>
+            setRecipeIdsOnCounter([...recipeIdsOnCounter, recipe.id])
+          }
+        >
+          <PlusIcon className="h-4 w-4 mr-2" />
+          Cook
+        </Button>
+      )}
+    </CardFooter>
   );
 }
 
