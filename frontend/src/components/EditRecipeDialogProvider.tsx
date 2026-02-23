@@ -83,12 +83,12 @@ export default function EditRecipeDialogProvider({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       {open && editedRecipe && (
-        <DialogContent>
+        <DialogContent className="max-h-[calc(100vh-2rem)] grid-rows-[auto_1fr_auto]">
           <UploadImageHeader
             editedRecipe={editedRecipe}
             setEditedRecipe={setEditedRecipe}
           />
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 overflow-y-auto min-h-0 px-3">
             <ErrableTextInputField
               kind="input"
               id="edit-recipe-title"
