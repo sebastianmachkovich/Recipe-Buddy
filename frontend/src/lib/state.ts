@@ -50,7 +50,8 @@ export type Step = {
 
 export const tabAtom = atom(Tab.Home);
 export const recipeIdsOnCounterAtom = atom([] as number[]);
-
+// TODO: Don't hardcode this.
+export const recommendationIdsAtom = atom([1, 3, 7] as number[]); 
 
 export const recipesAtom = atom([
     {
