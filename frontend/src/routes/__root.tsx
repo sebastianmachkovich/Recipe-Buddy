@@ -15,6 +15,8 @@ import CounterSidebar from "@/components/CounterSidebar";
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
+import "../index.css";
+
 const sidebarItems = [
   {
     label: "Home",
@@ -85,4 +87,6 @@ function RootLayout() {
   );
 }
 
-export const Route = createRootRoute({ component: RootLayout });
+export const Route = createRootRoute({
+  component: RootLayout,
+});

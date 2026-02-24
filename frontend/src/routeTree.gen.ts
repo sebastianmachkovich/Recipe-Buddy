@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RecipesRouteImport } from './routes/recipes'
 import { Route as HomeRouteImport } from './routes/home'
+import { Route as IndexRouteImport } from './routes/index'
 
 const RecipesRoute = RecipesRouteImport.update({
   id: '/recipes',
@@ -22,29 +23,38 @@ const HomeRoute = HomeRouteImport.update({
   path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/home': typeof HomeRoute
   '/recipes': typeof RecipesRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/home': typeof HomeRoute
   '/recipes': typeof RecipesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/home': typeof HomeRoute
   '/recipes': typeof RecipesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/home' | '/recipes'
+  fullPaths: '/' | '/home' | '/recipes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/home' | '/recipes'
-  id: '__root__' | '/home' | '/recipes'
+  to: '/' | '/home' | '/recipes'
+  id: '__root__' | '/' | '/home' | '/recipes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   HomeRoute: typeof HomeRoute
   RecipesRoute: typeof RecipesRoute
 }
@@ -65,10 +75,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   HomeRoute: HomeRoute,
   RecipesRoute: RecipesRoute,
 }
