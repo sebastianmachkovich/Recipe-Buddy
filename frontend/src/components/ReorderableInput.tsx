@@ -18,6 +18,10 @@ import { GripVerticalIcon, X } from "lucide-react";
 import { Dispatch, SetStateAction } from "react";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  restrictToVerticalAxis,
+  restrictToParentElement,
+} from "@dnd-kit/modifiers";
+import {
   closestCenter,
   DndContext,
   DragEndEvent,
@@ -223,25 +227,28 @@ export function ReorderableInputField({
   return (
     <Field>
       <FieldLabel>{label}</FieldLabel>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={editedRecipe[arrKey].map((it) => it.id)}
-          strategy={verticalListSortingStrategy}
+      <div className="flex flex-col gap-3">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
         >
-          {editedRecipe[arrKey].map((it) => (
-            <Component
-              key={it.id}
-              item={it as Which}
-              onDelete={() => handleDelete(it.id)}
-              onChange={handleUpdate}
-            />
-          ))}
-        </SortableContext>
-      </DndContext>
+          <SortableContext
+            items={editedRecipe[arrKey].map((it) => it.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {editedRecipe[arrKey].map((it) => (
+              <Component
+                key={it.id}
+                item={it as Which}
+                onDelete={() => handleDelete(it.id)}
+                onChange={handleUpdate}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
+      </div>
     </Field>
   );
 }

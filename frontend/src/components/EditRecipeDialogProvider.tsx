@@ -88,7 +88,7 @@ export default function EditRecipeDialogProvider({
             editedRecipe={editedRecipe}
             setEditedRecipe={setEditedRecipe}
           />
-          <div className="flex flex-col gap-3 overflow-y-auto min-h-0 px-3">
+          <div className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden min-h-0 px-3">
             <ErrableTextInputField
               kind="input"
               id="edit-recipe-title"
