@@ -1,8 +1,9 @@
 import { recipesAtom, recommendationIdsAtom } from "@/lib/state";
-import RecommentationCard from "./RecommendationCard";
+import RecommentationCard from "@/components/RecommendationCard";
 import { useAtomValue } from "jotai";
+import { createFileRoute } from "@tanstack/react-router";
 
-export default function HomePage() {
+function HomePage() {
   const recipes = useAtomValue(recipesAtom);
   const recommendations = useAtomValue(recommendationIdsAtom);
   return (
@@ -17,3 +18,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+export const Route = createFileRoute("/home")({ component: HomePage });

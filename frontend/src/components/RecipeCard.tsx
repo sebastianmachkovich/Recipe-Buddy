@@ -7,16 +7,12 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  RecipeCardData,
-  recipesAtom,
-  recipeIdsOnCounterAtom,
-} from "@/lib/state";
-import { useAtom, useAtomValue } from "jotai";
-import EditRecipeDialogProvider from "./EditRecipeDialogProvider";
+import { RecipeCardData, recipeIdsOnCounterAtom } from "@/lib/state";
+import { useAtom } from "jotai";
+import EditRecipeDialogProvider from "@/components/EditRecipeDialogProvider";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
 
-function AddRecipeCard() {
+export function AddRecipeCard() {
   return (
     <EditRecipeDialogProvider>
       <Card className="h-full flex flex-col cursor-pointer hover:bg-accent/50 transition-colors border-2">
@@ -30,7 +26,7 @@ function AddRecipeCard() {
   );
 }
 
-function RecipeCard({ recipe }: { recipe: RecipeCardData }) {
+export function RecipeCard({ recipe }: { recipe: RecipeCardData }) {
   return (
     <Card className="h-full flex flex-col pt-0 overflow-hidden select-none">
       <img
@@ -93,19 +89,5 @@ export function RecipeCardFooter({ recipe }: { recipe: RecipeCardData }) {
         </Button>
       )}
     </CardFooter>
-  );
-}
-
-export default function RecipesPage() {
-  const recipes = useAtomValue(recipesAtom);
-  return (
-    <div className="container mx-auto p-6">
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
-        <AddRecipeCard />
-        {recipes.map((recipe) => (
-          <RecipeCard key={recipe.id} recipe={recipe} />
-        ))}
-      </div>
-    </div>
   );
 }

@@ -1,11 +1,6 @@
 import { atom } from "jotai";
 
 
-export const enum Tab {
-    Home = "Home",
-    Recipes = "Recipes",
-}
-
 export type RecipeCardData = {
   id: number;
   title: string;
@@ -48,7 +43,6 @@ export type Step = {
 };
 
 
-export const tabAtom = atom(Tab.Home);
 export const recipeIdsOnCounterAtom = atom([] as number[]);
 // TODO: Don't hardcode this.
 export const recommendationIdsAtom = atom([1, 3, 7] as number[]); 

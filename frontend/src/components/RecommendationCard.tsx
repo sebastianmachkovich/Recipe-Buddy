@@ -1,7 +1,7 @@
 import { IngredientUnit, RecipeCardData } from "@/lib/state";
 import { Card, CardDescription, CardTitle } from "./ui/card";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
-import { RecipeCardFooter } from "./RecipesPage";
+import { RecipeCardFooter } from "@/components/RecipeCard";
 
 export default function RecommendationCard({
   recipe,
