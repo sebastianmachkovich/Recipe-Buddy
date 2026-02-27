@@ -7,10 +7,15 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RecipeCardData, recipeIdsOnCounterAtom } from "@/lib/state";
-import { useAtom } from "jotai";
 import EditRecipeDialogProvider from "@/components/EditRecipeDialogProvider";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
+import {
+  useAddToPlan,
+  useRemoveFromPlan,
+  usePlanIds,
+  useRecipe,
+} from "@/hooks/queries";
+import { useMemo } from "react";
 
 export function AddRecipeCard() {
   return (
@@ -26,37 +31,42 @@ export function AddRecipeCard() {
   );
 }
 
-export function RecipeCard({ recipe }: { recipe: RecipeCardData }) {
+export function RecipeCard({ recipeId }: { recipeId: number }) {
+  const { data: recipe } = useRecipe(recipeId);
+
   return (
     <Card className="h-full flex flex-col pt-0 overflow-hidden select-none">
       <img
-        src={recipe.imgUrl || BowlWhisk}
-        alt={recipe.title}
+        src={recipe!.imgUrl || BowlWhisk}
+        alt={recipe!.title}
         className="aspect-[4/3] w-full object-cover rounded-t-lg"
       />
       <CardHeader className="flex-shrink-0 px-6 pt-6">
-        <CardTitle className="font-bold select-none">{recipe.title}</CardTitle>
+        <CardTitle className="font-bold select-none">{recipe!.title}</CardTitle>
         <div className="relative h-16 overflow-hidden">
           <CardDescription className="absolute inset-0 select-none">
-            {recipe.description}
+            {recipe!.description}
           </CardDescription>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-card to-transparent" />
         </div>
       </CardHeader>
-      <RecipeCardFooter recipe={recipe} />
+      <RecipeCardFooter recipeId={recipeId} />
     </Card>
   );
 }
 
-export function RecipeCardFooter({ recipe }: { recipe: RecipeCardData }) {
-  const [recipeIdsOnCounter, setRecipeIdsOnCounter] = useAtom(
-    recipeIdsOnCounterAtom,
+export function RecipeCardFooter({ recipeId }: { recipeId: number }) {
+  const { data: planIds } = usePlanIds();
+  const isRecipeOnCounter = useMemo(
+    () => planIds?.includes(recipeId),
+    [planIds, recipeId],
   );
-  const isRecipeOnCounter = recipeIdsOnCounter.includes(recipe.id);
+  const { mutate: addToPlan } = useAddToPlan();
+  const { mutate: removeFromPlan } = useRemoveFromPlan();
 
   return (
     <CardFooter className="w-full flex justify-start gap-2">
-      <EditRecipeDialogProvider recipe={recipe}>
+      <EditRecipeDialogProvider recipeId={recipeId}>
         <Button variant="outline" size="lg">
           <PencilIcon className="h-4 w-4" />
         </Button>
@@ -66,11 +76,7 @@ export function RecipeCardFooter({ recipe }: { recipe: RecipeCardData }) {
           variant="default"
           size="lg"
           className="ml-auto"
-          onClick={() =>
-            setRecipeIdsOnCounter(
-              recipeIdsOnCounter.filter((id) => id !== recipe.id),
-            )
-          }
+          onClick={() => removeFromPlan(recipeId)}
         >
           <Check className="h-4 w-4 mr-2" />
           Cooking
@@ -80,9 +86,7 @@ export function RecipeCardFooter({ recipe }: { recipe: RecipeCardData }) {
           variant="default"
           size="lg"
           className="ml-auto"
-          onClick={() =>
-            setRecipeIdsOnCounter([...recipeIdsOnCounter, recipe.id])
-          }
+          onClick={() => addToPlan(recipeId)}
         >
           <PlusIcon className="h-4 w-4 mr-2" />
           Cook

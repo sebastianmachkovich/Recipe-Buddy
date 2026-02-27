@@ -1,19 +1,15 @@
-import { recipesAtom, recommendationIdsAtom } from "@/lib/state";
 import RecommentationCard from "@/components/RecommendationCard";
-import { useAtomValue } from "jotai";
 import { createFileRoute } from "@tanstack/react-router";
+import { useFeedIds } from "@/hooks/queries";
 
 function HomePage() {
-  const recipes = useAtomValue(recipesAtom);
-  const recommendations = useAtomValue(recommendationIdsAtom);
+  const { data: recommendations, isLoading } = useFeedIds();
+
+  if (isLoading || !recommendations) return <div>Loading...</div>;
   return (
     <div className="mx-auto p-6 flex flex-col items-center gap-6">
       {recommendations.map((id, i) => (
-        <RecommentationCard
-          key={i}
-          recipe={recipes.find((recipe) => recipe.id === id)!}
-          orientation={i % 2 === 0}
-        />
+        <RecommentationCard key={i} recipeId={id} orientation={i % 2 === 0} />
       ))}
     </div>
   );

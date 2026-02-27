@@ -1,15 +1,17 @@
-import { IngredientUnit, RecipeCardData } from "@/lib/state";
+import { IngredientUnit } from "@/lib/state";
 import { Card, CardDescription, CardTitle } from "./ui/card";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
 import { RecipeCardFooter } from "@/components/RecipeCard";
+import { useRecipe } from "@/hooks/queries";
 
 export default function RecommendationCard({
-  recipe,
+  recipeId,
   orientation,
 }: {
-  recipe: RecipeCardData;
+  recipeId: number;
   orientation: boolean;
 }) {
+  const recipe = useRecipe(recipeId).data!;
   return (
     <Card
       className={`flex ${orientation ? "flex-row-reverse" : "flex-row"} w-2/3 p-0 overflow-hidden`}
@@ -48,7 +50,7 @@ export default function RecommendationCard({
           </CardDescription>
           <div className="pointer-events-none absolute inset-x-6 bottom-0 h-8 bg-gradient-to-t from-card to-transparent" />
         </div>
-        <RecipeCardFooter recipe={recipe} />
+        <RecipeCardFooter recipeId={recipeId} />
       </div>
     </Card>
   );

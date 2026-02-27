@@ -1,5 +1,4 @@
-import { RecipeCardData, recipesAtom } from "@/lib/state";
-import { useSetAtom } from "jotai";
+import { RecipeCardData } from "@/lib/state";
 import { Dispatch, SetStateAction } from "react";
 import {
   Dialog,
@@ -13,6 +12,7 @@ import {
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Trash } from "lucide-react";
+import { useRemoveRecipe } from "@/hooks/queries";
 
 export function DeleteRecipeButton({
   editedRecipe,
@@ -21,11 +21,10 @@ export function DeleteRecipeButton({
   editedRecipe: RecipeCardData;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) {
-  const setRecipes = useSetAtom(recipesAtom);
-
+  const { mutate: removeRecipe } = useRemoveRecipe();
   // Deletes the recipe from the list and closes the dialog.
   function handleDeleteRecipe() {
-    setRecipes((prev) => prev.filter((it) => it.id !== editedRecipe?.id));
+    removeRecipe(editedRecipe.id);
     setOpen(false);
   }
 

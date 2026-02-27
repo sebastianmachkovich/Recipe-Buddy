@@ -12,10 +12,12 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import CounterSidebar from "@/components/CounterSidebar";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import "../index.css";
+import { qc } from "@/lib/state";
 
 const sidebarItems = [
   {
@@ -52,38 +54,41 @@ function AppSidebarButton({
 
 function RootLayout() {
   return (
-    <ThemeProvider defaultTheme="dark">
-      <TooltipProvider>
-        <SidebarProvider defaultOpen={false}>
-          <Sidebar collapsible="icon" variant="sidebar" className="group">
-            <SidebarContent className="flex flex-col gap-2">
-              <SidebarGroup>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {sidebarItems.map((item) => (
-                      <AppSidebarButton
-                        label={item.label}
-                        icon={item.icon}
-                        route={item.route}
-                      />
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </SidebarContent>
-          </Sidebar>
-          <SidebarInset className="flex flex-row overflow-hidden">
-            <SidebarProvider defaultOpen={true}>
-              <main className="flex-1 overflow-y-auto p-4">
-                <Outlet />
-                <TanStackRouterDevtools />
-              </main>
-              <CounterSidebar />
-            </SidebarProvider>
-          </SidebarInset>
-        </SidebarProvider>
-      </TooltipProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={qc}>
+      <ThemeProvider defaultTheme="dark">
+        <TooltipProvider>
+          <SidebarProvider defaultOpen={false}>
+            <Sidebar collapsible="icon" variant="sidebar" className="group">
+              <SidebarContent className="flex flex-col gap-2">
+                <SidebarGroup>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {sidebarItems.map((item, i) => (
+                        <AppSidebarButton
+                          key={i}
+                          label={item.label}
+                          icon={item.icon}
+                          route={item.route}
+                        />
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              </SidebarContent>
+            </Sidebar>
+            <SidebarInset className="flex flex-row overflow-hidden">
+              <SidebarProvider defaultOpen={true}>
+                <main className="flex-1 overflow-y-auto p-4">
+                  <Outlet />
+                  <TanStackRouterDevtools />
+                </main>
+                <CounterSidebar />
+              </SidebarProvider>
+            </SidebarInset>
+          </SidebarProvider>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

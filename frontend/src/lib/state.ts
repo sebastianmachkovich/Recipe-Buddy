@@ -1,5 +1,4 @@
-import { atom } from "jotai";
-
+import { QueryClient } from "@tanstack/react-query";
 
 export type RecipeCardData = {
   id: number;
@@ -42,12 +41,7 @@ export type Step = {
     }
 };
 
-
-export const recipeIdsOnCounterAtom = atom([] as number[]);
-// TODO: Don't hardcode this.
-export const recommendationIdsAtom = atom([1, 3, 7] as number[]); 
-
-export const recipesAtom = atom([
+export const recipes_DummyData = [
     {
         id: 1,
         title: "Spaghetti Carbonara",
@@ -148,4 +142,98 @@ export const recipesAtom = atom([
         ingredients: [],
         steps: [],
     },
-]);
+];
+
+export const aiGeneratedRecipes_DummyData = [
+    {
+        id: -1,
+        title: "Squash and Lentil Soup",
+        description:
+        "A hearty soup made with lentils, vegetables, and spices.",
+        imgUrl:
+        "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=400&h=300&fit=crop",
+        ingredients: [
+            { id: 1, name: "Lentils", amount: 1, unit: IngredientUnit.unit },
+            { id: 2, name: "Onions", amount: 1, unit: IngredientUnit.unit },
+            { id: 3, name: "Carrots", amount: 1, unit: IngredientUnit.unit },
+            { id: 4, name: "Potatoes", amount: 1, unit: IngredientUnit.unit },
+            { id: 5, name: "Garlic", amount: 1, unit: IngredientUnit.unit },
+            { id: 6, name: "Ginger", amount: 1, unit: IngredientUnit.unit },
+            { id: 7, name: "Chili Peppers", amount: 1, unit: IngredientUnit.unit },
+        ],
+        steps: [
+            {
+                id: 1,
+                description: "Cook lentils",
+                time: {
+                    hours: 1,
+                    minutes: 30,
+                },
+            },
+            {
+                id: 2,
+                description: "Cook vegetables",
+                time: {
+                    hours: 1,
+                    minutes: 30,
+                },
+            },
+        ],
+    },
+    {
+        id: -2,
+        title: "Chicken and Vegetable Stir Fry",
+        description:
+        "A flavorful stir fry made with chicken, vegetables, and spices.",
+        imgUrl:
+        "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=400&h=300&fit=crop",
+        ingredients: [
+            { id: 1, name: "Chicken", amount: 1, unit: IngredientUnit.unit },
+            { id: 2, name: "Onions", amount: 1, unit: IngredientUnit.unit },
+            { id: 3, name: "Carrots", amount: 1, unit: IngredientUnit.unit },
+            { id: 4, name: "Potatoes", amount: 1, unit: IngredientUnit.unit },
+            { id: 5, name: "Garlic", amount: 1, unit: IngredientUnit.unit },
+            { id: 6, name: "Ginger", amount: 1, unit: IngredientUnit.unit },
+            { id: 7, name: "Chili Peppers", amount: 1, unit: IngredientUnit.unit },
+        ],
+        steps: [
+            {
+                id: 1,
+                description: "Cook chicken",
+                time: {
+                    hours: 1,
+                    minutes: 30,
+                },
+            },
+            {
+                id: 2,
+                description: "Cook vegetables",
+                time: {
+                    hours: 1,
+                    minutes: 30,
+                },
+            },
+            {
+                id: 3,
+                description: "Cook stir fry",
+                time: {
+                    hours: 1,
+                    minutes: 30,
+                },
+            },
+        ],
+    },
+]
+
+
+export const qc = new QueryClient();
+// TODO: Replace this with a real request when the app loads.
+// Note: The AI suggestions and user recipes are stored in the same cache key.
+//       This is fine because all AI suggestions have negative IDs, and all
+//       user recipes have positive IDs.
+recipes_DummyData.forEach((it) => qc.setQueryData(["recipes", it.id], it));
+aiGeneratedRecipes_DummyData.forEach((it) =>
+  qc.setQueryData(["recipes", it.id], it),
+);
+qc.setQueryData(["feedIds"], [1, -1, 5] as number[]);
+qc.setQueryData(["planIds"], [] as number[]);

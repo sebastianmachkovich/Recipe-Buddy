@@ -6,28 +6,35 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { recipesAtom, type RecipeCardData } from "@/lib/state";
-import { useAtom } from "jotai";
+import { type RecipeCardData } from "@/lib/state";
 import { useState } from "react";
 import ErrableTextInputField from "./ErrableTextInputField";
 import { ReorderableInputField } from "./ReorderableInput";
 import { deepCopyRecipe } from "@/lib/utils";
 import { DeleteRecipeButton } from "./DeleteRecipeButton";
 import { UploadImageHeader } from "./UploadImageHeader";
+import {
+  useAddRecipe,
+  useUpdateRecipe,
+  useRecipe,
+  useRecipeIds,
+} from "@/hooks/queries";
 
 export default function EditRecipeDialogProvider({
   children,
-  recipe,
+  recipeId,
 }: {
   children: React.ReactNode;
-  recipe?: RecipeCardData;
+  recipeId?: number;
 }) {
+  const { data: recipe } = useRecipe(recipeId);
+  const { data: recipeIds } = useRecipeIds();
+  const { mutate: addRecipe } = useAddRecipe();
+  const { mutate: updateRecipe } = useUpdateRecipe();
+
   // Observes whether the dialog is open.  Needed because we use a <DialogTrigger>
   // to open the it, rather than a prop.
   const [open, setOpen] = useState(false);
-
-  // The recipes list.  Needed for updating on submit.
-  const [recipes, setRecipes] = useAtom(recipesAtom);
 
   // A copy of the recipe that gets edited in the dialog.  Overwrites the
   // original recipe when the dialog is closed with the submit button.  It is
@@ -42,7 +49,8 @@ export default function EditRecipeDialogProvider({
   function handleOpenChange(newOpen: boolean) {
     if (newOpen) {
       // Resets all state local to the component.
-      const newId = Math.max(0, ...recipes.map((it) => it.id)) + 1;
+      const ids = recipeIds || [];
+      const newId = ids.length > 0 ? Math.max(...ids) + 1 : 1;
       setEditedRecipe(deepCopyRecipe(recipe, newId));
       setTitleError(false);
       setDescriptionError(false);
@@ -68,11 +76,9 @@ export default function EditRecipeDialogProvider({
     // Updates the recipe in the list if it exists, or creates a new one and
     // appends it to the list.
     if (recipe) {
-      setRecipes((prev) =>
-        prev.map((it) => (it.id === recipe.id ? editedRecipe : it)),
-      );
+      updateRecipe(editedRecipe);
     } else {
-      setRecipes((prev) => [...prev, editedRecipe]);
+      addRecipe(editedRecipe);
     }
 
     // Manually closes the dialog.
