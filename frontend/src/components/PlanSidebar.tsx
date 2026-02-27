@@ -14,8 +14,8 @@ import { X } from "lucide-react";
 import EditRecipeDialogProvider from "./EditRecipeDialogProvider";
 import { usePlanIds, useRecipe, useRemoveFromPlan } from "@/hooks/queries";
 
-export default function CounterSidebar() {
-  const { data: recipeIdsOnCounter } = usePlanIds();
+export default function PlanSidebar() {
+  const { data: recipeIdsInPlan } = usePlanIds();
   return (
     <Sidebar
       collapsible="icon"
@@ -28,7 +28,7 @@ export default function CounterSidebar() {
           <SidebarGroupLabel>Plan</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {recipeIdsOnCounter?.map((id) => (
+              {recipeIdsInPlan?.map((id) => (
                 <EditRecipeSidebarMenuButton recipeId={id} />
               ))}
             </SidebarMenu>

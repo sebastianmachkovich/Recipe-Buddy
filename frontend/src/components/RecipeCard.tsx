@@ -57,7 +57,7 @@ export function RecipeCard({ recipeId }: { recipeId: number }) {
 
 export function RecipeCardFooter({ recipeId }: { recipeId: number }) {
   const { data: planIds } = usePlanIds();
-  const isRecipeOnCounter = useMemo(
+  const isRecipeInPlan = useMemo(
     () => planIds?.includes(recipeId),
     [planIds, recipeId],
   );
@@ -71,7 +71,7 @@ export function RecipeCardFooter({ recipeId }: { recipeId: number }) {
           <PencilIcon className="h-4 w-4" />
         </Button>
       </EditRecipeDialogProvider>
-      {isRecipeOnCounter ? (
+      {isRecipeInPlan ? (
         <Button
           variant="default"
           size="lg"
