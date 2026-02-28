@@ -29,7 +29,7 @@ export default function PlanSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {recipeIdsInPlan?.map((id) => (
-                <EditRecipeSidebarMenuButton recipeId={id} />
+                <EditRecipeSidebarMenuButton key={id} recipeId={id} />
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
