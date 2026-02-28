@@ -8,6 +8,8 @@ export function useRecipe(id?: number) {
             ? undefined
             : qc.getQueryData(["recipes", id]) as RecipeCardData,
         enabled: !!id,
+        staleTime: Infinity,
+        gcTime: Infinity,
     });
 }
 
@@ -52,6 +54,8 @@ export function useRecipeIds() {
             .filter((it) => it > 0),
         enabled: true,
         initialData: recipes_DummyData.map((it) => it.id),
+        staleTime: Infinity,
+        gcTime: Infinity,
     });
 }
 
