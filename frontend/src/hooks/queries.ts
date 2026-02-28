@@ -27,6 +27,9 @@ export function useRemoveRecipe() {
             qc.setQueryData(["planIds"], (ids: number[] | undefined) =>
                 ids?.filter((it) => it !== id)
             );
+            qc.setQueryData(["feedIds"], (ids: number[] | undefined) =>
+                ids?.filter((it) => it !== id)
+            );
             await qc.invalidateQueries({ queryKey: ["recipeIds"] });
         },
     });
