@@ -1,4 +1,4 @@
-import { Check, PencilIcon, PlusIcon } from "lucide-react";
+import { Check, PlusIcon } from "lucide-react";
 import {
   Card,
   CardFooter,
@@ -20,7 +20,7 @@ import { useMemo } from "react";
 export function AddRecipeCard() {
   return (
     <EditRecipeDialogProvider>
-      <Card className="h-full flex flex-col cursor-pointer hover:bg-accent/50 transition-colors border-2">
+      <Card className="h-full flex flex-col cursor-pointer hover:bg-accent/50 dark:hover:bg-input transition-colors border-2">
         <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
           <PlusIcon className="h-12 w-12" />
           <span className="text-sm font-medium select-none">Add Recipe</span>
@@ -35,27 +35,36 @@ export function RecipeCard({ recipeId }: { recipeId: number }) {
   const { data: recipe } = useRecipe(recipeId);
 
   return (
-    <Card className="h-full flex flex-col pt-0 overflow-hidden select-none">
-      <img
-        src={recipe!.imgUrl || BowlWhisk}
-        alt={recipe!.title}
-        className="aspect-[4/3] w-full object-cover rounded-t-lg"
-      />
-      <CardHeader className="flex-shrink-0 px-6 pt-6">
-        <CardTitle className="font-bold select-none">{recipe!.title}</CardTitle>
-        <div className="relative h-16 overflow-hidden">
-          <CardDescription className="absolute inset-0 select-none">
-            {recipe!.description}
-          </CardDescription>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-card to-transparent" />
-        </div>
-      </CardHeader>
-      <RecipeCardFooter recipeId={recipeId} />
-    </Card>
+    <EditRecipeDialogProvider recipeId={recipeId}>
+      <Card className="group h-full flex flex-col pt-0 overflow-hidden select-none hover:bg-accent hover:text-accent-foreground dark:bg-card dark:border-input dark:hover:bg-input cursor-pointer">
+        <img
+          src={recipe!.imgUrl || BowlWhisk}
+          alt={recipe!.title}
+          className="aspect-[4/3] w-full object-cover rounded-t-lg"
+        />
+        <CardHeader className="flex-shrink-0 px-6 pt-6">
+          <CardTitle className="font-bold select-none">
+            {recipe!.title}
+          </CardTitle>
+          <div className="relative h-16 overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]">
+            <CardDescription className="absolute inset-0 select-none">
+              {recipe!.description}
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <RecipeCardFooter recipeId={recipeId} onLeft={false} />
+      </Card>
+    </EditRecipeDialogProvider>
   );
 }
 
-export function RecipeCardFooter({ recipeId }: { recipeId: number }) {
+export function RecipeCardFooter({
+  recipeId,
+  onLeft,
+}: {
+  recipeId: number;
+  onLeft: boolean;
+}) {
   const { data: planIds } = usePlanIds();
   const isRecipeInPlan = useMemo(
     () => planIds?.includes(recipeId),
@@ -65,18 +74,17 @@ export function RecipeCardFooter({ recipeId }: { recipeId: number }) {
   const { mutate: removeFromPlan } = useRemoveFromPlan();
 
   return (
-    <CardFooter className="w-full flex justify-start gap-2">
-      <EditRecipeDialogProvider recipeId={recipeId}>
-        <Button variant="outline" size="lg">
-          <PencilIcon className="h-4 w-4" />
-        </Button>
-      </EditRecipeDialogProvider>
+    <CardFooter
+      className={`w-full flex ${onLeft ? "justify-start" : "justify-end"} gap-2`}
+    >
       {isRecipeInPlan ? (
         <Button
           variant="default"
           size="lg"
-          className="ml-auto"
-          onClick={() => removeFromPlan(recipeId)}
+          onClick={(e) => {
+            e.stopPropagation();
+            removeFromPlan(recipeId);
+          }}
         >
           <Check className="h-4 w-4 mr-2" />
           Cooking
@@ -85,8 +93,10 @@ export function RecipeCardFooter({ recipeId }: { recipeId: number }) {
         <Button
           variant="default"
           size="lg"
-          className="ml-auto"
-          onClick={() => addToPlan(recipeId)}
+          onClick={(e) => {
+            e.stopPropagation();
+            addToPlan(recipeId);
+          }}
         >
           <PlusIcon className="h-4 w-4 mr-2" />
           Cook
