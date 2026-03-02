@@ -22,7 +22,7 @@ export function deepCopyRecipe(
   }
   return {
     id: newId,
-    title: "",
+    name: "",
     description: "",
     imgUrl: "",
     ingredients: [],

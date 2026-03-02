@@ -22,13 +22,13 @@ export default function RecommendationCard({
       >
         <img
           src={recipe.imgUrl || BowlWhisk}
-          alt={recipe.title}
+          alt={recipe.name}
           className={`w-2/5 object-cover shrink-0 
                 ${orientation ? "rounded-r-lg" : "rounded-l-lg"}`}
         />
         <div className="flex flex-col w-3/5 py-4 gap-2">
           <CardTitle className="px-6 font-bold select-none line-clamp-1">
-            {recipe.title}
+            {recipe.name}
           </CardTitle>
           <div className="relative flex-1 overflow-hidden px-6 [mask-image:linear-gradient(to_bottom,black_80%,transparent_100%)]">
             <CardDescription className="select-none">

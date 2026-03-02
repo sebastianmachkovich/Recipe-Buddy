@@ -47,7 +47,7 @@ export default function EditRecipeDialogProvider({
   const [newSteps, setNewSteps] = useState<string[]>([]);
 
   // Error states for the form fields.
-  const [titleError, setTitleError] = useState(false);
+  const [nameError, setNameError] = useState(false);
   const [descriptionError, setDescriptionError] = useState(false);
 
   // Opens the dialog if the trigger is clicked.
@@ -57,7 +57,7 @@ export default function EditRecipeDialogProvider({
       const ids = recipeIds || [];
       const newId = ids.length > 0 ? Math.max(...ids) + 1 : 1;
       setEditedRecipe(deepCopyRecipe(recipe, newId));
-      setTitleError(false);
+      setNameError(false);
       setDescriptionError(false);
       setNewIngredients([]);
       setNewSteps([]);
@@ -70,8 +70,8 @@ export default function EditRecipeDialogProvider({
 
     // Does basic input validation.
     let hasErrors = false;
-    if (!editedRecipe.title) {
-      setTitleError(true);
+    if (!editedRecipe.name) {
+      setNameError(true);
       hasErrors = true;
     }
     if (!editedRecipe.description) {
@@ -110,17 +110,17 @@ export default function EditRecipeDialogProvider({
           <div className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden min-h-0 px-3">
             <ErrableTextInputField
               kind="input"
-              id="edit-recipe-title"
+              id="edit-recipe-name"
               description="Name"
               placeholder="Something Delicious"
-              value={editedRecipe.title}
+              value={editedRecipe.name}
               onChange={(e) =>
                 setEditedRecipe((prev) =>
-                  prev ? { ...prev, title: e.target.value } : prev,
+                  prev ? { ...prev, name: e.target.value } : prev,
                 )
               }
-              hasError={titleError}
-              errorMsg="Title Required"
+              hasError={nameError}
+              errorMsg="Name Required"
             />
             <ErrableTextInputField
               kind="textarea"

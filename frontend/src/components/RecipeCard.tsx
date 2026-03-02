@@ -39,12 +39,12 @@ export function RecipeCard({ recipeId }: { recipeId: number }) {
       <Card className="group h-full flex flex-col pt-0 overflow-hidden select-none hover:bg-accent hover:text-accent-foreground dark:bg-card dark:border-input dark:hover:bg-input cursor-pointer">
         <img
           src={recipe!.imgUrl || BowlWhisk}
-          alt={recipe!.title}
+          alt={recipe!.name}
           className="aspect-[4/3] w-full object-cover rounded-t-lg"
         />
         <CardHeader className="flex-shrink-0 px-6 pt-6">
           <CardTitle className="font-bold select-none">
-            {recipe!.title}
+            {recipe!.name}
           </CardTitle>
           <div className="relative h-16 overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]">
             <CardDescription className="absolute inset-0 select-none">

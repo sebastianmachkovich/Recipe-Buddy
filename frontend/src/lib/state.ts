@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 
 export type RecipeCardData = {
   id: number;
-  title: string;
+  name: string;
   description: string;
   imgUrl: string;
   ingredients: Ingredient[];
@@ -44,7 +44,7 @@ export type Step = {
 export const recipes_DummyData = [
     {
         id: 1,
-        title: "Spaghetti Carbonara",
+        name: "Spaghetti Carbonara",
         description:
         "A classic Italian pasta dish with eggs, cheese, pancetta, and black pepper.",
         imgUrl:
@@ -74,7 +74,7 @@ export const recipes_DummyData = [
     } as RecipeCardData,
     {
         id: 2,
-        title: "Chicken Tikka Masala",
+        name: "Chicken Tikka Masala",
         description:
         "Tender chicken in a creamy, spiced tomato sauce served with basmati rice.",
         imgUrl:
@@ -84,7 +84,7 @@ export const recipes_DummyData = [
     },
     {
         id: 3,
-        title: "Beef Tacos",
+        name: "Beef Tacos",
         description:
         "Seasoned ground beef in crispy corn tortillas with fresh toppings and salsa.",
         imgUrl:
@@ -94,7 +94,7 @@ export const recipes_DummyData = [
     },
     {
         id: 4,
-        title: "Caesar Salad",
+        name: "Caesar Salad",
         description:
         "Crisp romaine lettuce with parmesan, croutons, and creamy Caesar dressing.",
         imgUrl:
@@ -104,7 +104,7 @@ export const recipes_DummyData = [
     },
     {
         id: 5,
-        title: "Margherita Pizza",
+        name: "Margherita Pizza",
         description:
         "Traditional Neapolitan pizza with fresh mozzarella, tomatoes, and basil.",
         imgUrl:
@@ -114,7 +114,7 @@ export const recipes_DummyData = [
     },
     {
         id: 6,
-        title: "Grilled Salmon",
+        name: "Grilled Salmon",
         description:
         "Fresh Atlantic salmon fillet with lemon herb butter and steamed vegetables.",
         imgUrl:
@@ -124,7 +124,7 @@ export const recipes_DummyData = [
     },
     {
         id: 7,
-        title: "Mushroom Risotto",
+        name: "Mushroom Risotto",
         description:
         "Creamy Italian rice dish with mixed wild mushrooms and parmesan cheese. asldfj sad lsajfljsdf  lak  lkjsldflskd jflsl alk sld fkdsl jflkds jfls jlskd jfksld jflksjlsj flsjf oiwejfowlskdfmlkxjiod   jo welf sld jfsldk jwoie jlsdk jslk jiojfwiojdslkf jliweljfowijfldkj dlskjdiwejfldksd jkdsl jfoi",
         imgUrl:
@@ -134,7 +134,7 @@ export const recipes_DummyData = [
     },
     {
         id: 8,
-        title: "BBQ Ribs",
+        name: "BBQ Ribs",
         description:
         "Slow-cooked pork ribs with tangy barbecue sauce and coleslaw.",
         imgUrl:
@@ -147,7 +147,7 @@ export const recipes_DummyData = [
 export const aiGeneratedRecipes_DummyData = [
     {
         id: -1,
-        title: "Squash and Lentil Soup",
+        name: "Squash and Lentil Soup",
         description:
         "A hearty soup made with lentils, vegetables, and spices.",
         imgUrl:
@@ -182,7 +182,7 @@ export const aiGeneratedRecipes_DummyData = [
     },
     {
         id: -2,
-        title: "Chicken and Vegetable Stir Fry",
+        name: "Chicken and Vegetable Stir Fry",
         description:
         "A flavorful stir fry made with chicken, vegetables, and spices.",
         imgUrl:

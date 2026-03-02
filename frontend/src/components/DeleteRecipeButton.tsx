@@ -38,7 +38,7 @@ export function DeleteRecipeButton({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
-            Delete {editedRecipe.title}?
+            Delete {editedRecipe.name}?
           </DialogTitle>
           <DialogDescription>
             Are you sure you want to delete this recipe?
