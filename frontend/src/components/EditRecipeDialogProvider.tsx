@@ -9,6 +9,7 @@ import { Button } from "./ui/button";
 import { type RecipeCardData } from "@/lib/state";
 import { useState } from "react";
 import ErrableTextInputField from "./ErrableTextInputField";
+import UnparsedTextInputFieldList from "./UnparsedTextInputFieldList";
 import { ReorderableInputField } from "./ReorderableInput";
 import { deepCopyRecipe } from "@/lib/utils";
 import { DeleteRecipeButton } from "./DeleteRecipeButton";
@@ -41,6 +42,10 @@ export default function EditRecipeDialogProvider({
   // null when the "Add Recipe" button opens the dialog.
   const [editedRecipe, setEditedRecipe] = useState<RecipeCardData | null>(null);
 
+  // Unparsed ingredients and steps.
+  const [newIngredients, setNewIngredients] = useState<string[]>([]);
+  const [newSteps, setNewSteps] = useState<string[]>([]);
+
   // Error states for the form fields.
   const [titleError, setTitleError] = useState(false);
   const [descriptionError, setDescriptionError] = useState(false);
@@ -54,6 +59,8 @@ export default function EditRecipeDialogProvider({
       setEditedRecipe(deepCopyRecipe(recipe, newId));
       setTitleError(false);
       setDescriptionError(false);
+      setNewIngredients([]);
+      setNewSteps([]);
     }
     setOpen(newOpen);
   }
@@ -72,6 +79,12 @@ export default function EditRecipeDialogProvider({
       hasErrors = true;
     }
     if (hasErrors) return;
+
+    // Sends any ingredients or steps to the server to be parsed.
+    // TODO: This will block while we wait for the server to parse the
+    //       ingredients and steps.  The submit button's text should be
+    //       replaced with a spinner and the fields should be disabled.
+    //       What happens when we cancel the dialog?
 
     // Updates the recipe in the list if it exists, or creates a new one and
     // appends it to the list.
@@ -129,14 +142,24 @@ export default function EditRecipeDialogProvider({
               setEditedRecipe={setEditedRecipe}
               arrKey="ingredients"
             />
-            {/* TODO: Add plain text ingredient input */}
+            <UnparsedTextInputFieldList
+              placeholder="Secret Sauce..."
+              listItemPlaceholder="Ingredient"
+              items={newIngredients}
+              setItems={setNewIngredients}
+            />
             <ReorderableInputField
               label="Steps"
               editedRecipe={editedRecipe}
               setEditedRecipe={setEditedRecipe}
               arrKey="steps"
             />
-            {/* TODO: Add plain text step input */}
+            <UnparsedTextInputFieldList
+              placeholder="Bake until done."
+              listItemPlaceholder="Step"
+              items={newSteps}
+              setItems={setNewSteps}
+            />
           </div>
           <DialogFooter className="pt-6">
             {recipe && (
