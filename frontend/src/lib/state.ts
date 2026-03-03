@@ -226,7 +226,14 @@ export const aiGeneratedRecipes_DummyData = [
 ]
 
 
-export const qc = new QueryClient();
+export const qc = new QueryClient({
+    defaultOptions: {
+        queries: {
+            staleTime: Infinity,
+            gcTime: Infinity,
+        },
+    },
+});
 // TODO: Replace this with a real request when the app loads.
 // Note: The AI suggestions and user recipes are stored in the same cache key.
 //       This is fine because all AI suggestions have negative IDs, and all
