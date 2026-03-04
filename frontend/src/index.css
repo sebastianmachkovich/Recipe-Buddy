@@ -37,6 +37,9 @@
     --sidebar-accent-foreground: oklch(0.216 0.006 56.043);
     --sidebar-border: oklch(0.923 0.003 48.717);
     --sidebar-ring: oklch(0.709 0.01 56.259);
+
+    --sidebar-accent-2: oklch(0.3576 0.007 34.298);
+    --star: oklch(0.7131 0.1581 60.4)
 }
 
 .dark {
@@ -73,6 +76,7 @@
     --sidebar-ring: oklch(0.553 0.013 58.071);
 
     --sidebar-accent-2: oklch(0.3576 0.007 34.298);
+    --star: oklch(0.792 0.1366 76)
 }
 
 @theme inline {
@@ -115,6 +119,9 @@
     --radius-2xl: calc(var(--radius) + 8px);
     --radius-3xl: calc(var(--radius) + 12px);
     --radius-4xl: calc(var(--radius) + 16px);
+
+    --color-sidebar-accent-2: var(--sidebar-accent-2);
+    --color-star: var(--star);
 }
 
 @layer base {
