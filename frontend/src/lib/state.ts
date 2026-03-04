@@ -5,6 +5,7 @@ export type RecipeCardData = {
   name: string;
   description: string;
   imgUrl: string;
+  rating: number;
   ingredients: Ingredient[];
   steps: Step[];
 };
@@ -49,6 +50,7 @@ export const recipes_DummyData = [
         "A classic Italian pasta dish with eggs, cheese, pancetta, and black pepper.",
         imgUrl:
         "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400&h=300&fit=crop",
+        rating: 4,
         ingredients: [
             { id: 1, name: "Eggs", amount: 2, unit: IngredientUnit.unit },
             { id: 2, name: "Cheese", amount: 1, unit: IngredientUnit.oz },
@@ -79,6 +81,7 @@ export const recipes_DummyData = [
         "Tender chicken in a creamy, spiced tomato sauce served with basmati rice.",
         imgUrl:
         "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400&h=300&fit=crop",
+        rating: 3,
         ingredients: [],
         steps: [],
     },
@@ -89,6 +92,7 @@ export const recipes_DummyData = [
         "Seasoned ground beef in crispy corn tortillas with fresh toppings and salsa.",
         imgUrl:
         "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=400&h=300&fit=crop",
+        rating: 5,
         ingredients: [],
         steps: [],
     },
@@ -99,6 +103,7 @@ export const recipes_DummyData = [
         "Crisp romaine lettuce with parmesan, croutons, and creamy Caesar dressing.",
         imgUrl:
         "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400&h=300&fit=crop",
+        rating: 4,
         ingredients: [],
         steps: [],
     },
@@ -109,6 +114,7 @@ export const recipes_DummyData = [
         "Traditional Neapolitan pizza with fresh mozzarella, tomatoes, and basil.",
         imgUrl:
         "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop",
+        rating: 5,
         ingredients: [],
         steps: [],
     },
@@ -119,6 +125,7 @@ export const recipes_DummyData = [
         "Fresh Atlantic salmon fillet with lemon herb butter and steamed vegetables.",
         imgUrl:
         "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400&h=300&fit=crop",
+        rating: 2,
         ingredients: [],
         steps: [],
     },
@@ -129,6 +136,7 @@ export const recipes_DummyData = [
         "Creamy Italian rice dish with mixed wild mushrooms and parmesan cheese. asldfj sad lsajfljsdf  lak  lkjsldflskd jflsl alk sld fkdsl jflkds jfls jlskd jfksld jflksjlsj flsjf oiwejfowlskdfmlkxjiod   jo welf sld jfsldk jwoie jlsdk jslk jiojfwiojdslkf jliweljfowijfldkj dlskjdiwejfldksd jkdsl jfoi",
         imgUrl:
         "https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=400&h=300&fit=crop",
+        rating: 3,
         ingredients: [],
         steps: [],
     },
@@ -139,6 +147,7 @@ export const recipes_DummyData = [
         "Slow-cooked pork ribs with tangy barbecue sauce and coleslaw.",
         imgUrl:
         "https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=300&fit=crop",
+        rating: 4,
         ingredients: [],
         steps: [],
     },
@@ -152,6 +161,7 @@ export const aiGeneratedRecipes_DummyData = [
         "A hearty soup made with lentils, vegetables, and spices.",
         imgUrl:
         "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=400&h=300&fit=crop",
+        rating: 0,
         ingredients: [
             { id: 1, name: "Lentils", amount: 1, unit: IngredientUnit.unit },
             { id: 2, name: "Onions", amount: 1, unit: IngredientUnit.unit },
@@ -187,6 +197,7 @@ export const aiGeneratedRecipes_DummyData = [
         "A flavorful stir fry made with chicken, vegetables, and spices.",
         imgUrl:
         "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=400&h=300&fit=crop",
+        rating: 0,
         ingredients: [
             { id: 1, name: "Chicken", amount: 1, unit: IngredientUnit.unit },
             { id: 2, name: "Onions", amount: 1, unit: IngredientUnit.unit },

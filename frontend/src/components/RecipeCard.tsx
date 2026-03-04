@@ -1,4 +1,5 @@
 import { Check, PlusIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardFooter,
@@ -14,8 +15,10 @@ import {
   useRemoveFromPlan,
   usePlanIds,
   useRecipe,
+  useUpdateRecipe,
 } from "@/hooks/queries";
 import { useMemo } from "react";
+import { StarRating } from "./StarRating";
 
 export function AddRecipeCard() {
   return (
@@ -75,8 +78,13 @@ export function RecipeCardFooter({
 
   return (
     <CardFooter
-      className={`w-full flex ${onLeft ? "justify-start" : "justify-end"} gap-2`}
+      className={`w-full flex ${onLeft ? "flex-row-reverse" : "flex-row"} justify-between gap-2`}
     >
+      {recipeId < 0 ? (
+        <Badge variant="secondary">AI</Badge>
+      ) : (
+        <StarRating recipeId={recipeId} />
+      )}
       {isRecipeInPlan ? (
         <Button
           variant="default"
