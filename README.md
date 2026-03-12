@@ -28,7 +28,7 @@ Both servers will start automatically!
 ## 📦 First Time Setup
 
 ### Backend Setup
-
+Python 3.11 is recommended: https://www.python.org/downloads/release/python-3118/
 ```bash
 cd backend
 python3 -m venv .venv              # macOS/Linux
@@ -44,7 +44,7 @@ pip install -r requirements.txt
 ```
 
 ### Frontend Setup
-
+Node.js required: https://nodejs.org/en/download
 ```bash
 cd frontend
 npm install
@@ -59,6 +59,8 @@ Recipe-Buddy/
 ├── backend/
 │   ├── app/
 │   │   ├── __init__.py
+│   │   ├── create_tables.py
+│   │   ├── models.py
 │   │   └── database.py          # Database config template
 │   ├── main.py                  # FastAPI app (minimal)
 │   ├── requirements.txt
@@ -96,7 +98,7 @@ Your Neon database is configured:
 
 - Connection string in `backend/.env`
 - Database setup template in `backend/app/database.py`
-- Uncomment code when you're ready to use it
+- ~~Uncomment code when you're ready to use it~~
 
 **Neon Dashboard**: https://console.neon.tech
 
