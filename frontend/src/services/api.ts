@@ -59,6 +59,27 @@ export interface PantryItem {
   updated_at: string | null;
 }
 
+export interface AIRecipeSuggestion {
+  name: string;
+  description: string;
+  ingredients: string[];
+  steps: string[];
+  prep_time_minutes: number | null;
+  cook_time_minutes: number | null;
+}
+
+export interface AIRecipeRequest {
+  ingredients: string[] | string;
+  max_recipes?: number;
+  cuisine_preference?: string;
+  dietary_preference?: string;
+}
+
+export interface AIRecipeResponse {
+  recipes: AIRecipeSuggestion[];
+  model: string;
+}
+
 // Ingredient API
 export const ingredientsAPI = {
   getAll: (search?: string) =>
@@ -94,6 +115,11 @@ export const pantryAPI = {
   }) => api.post<PantryItem>("/pantry/", data),
 
   remove: (id: number) => api.delete(`/pantry/${id}`),
+};
+
+export const aiAPI = {
+  generateRecipes: (data: AIRecipeRequest) =>
+    api.post<AIRecipeResponse>("/api/ai/recipes", data),
 };
 
 export default api;

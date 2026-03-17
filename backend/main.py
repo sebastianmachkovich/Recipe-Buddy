@@ -2,9 +2,16 @@
 
 
 from fastapi import FastAPI
+from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 import json
+import os
+import re
+from typing import Any
+
+import httpx
+from pydantic import BaseModel, Field, ValidationError
 from app.database import *
 from app.models import Recipe
 db = next(get_db())
@@ -86,6 +93,130 @@ def health_check():
 def test_endpoint():
     """Test endpoint to verify API is working."""
     return {"message": "API is working! Start building your features here."}
+
+
+class AIRecipeRequest(BaseModel):
+    ingredients: list[str] | str
+    max_recipes: int = Field(default=5, ge=1, le=10)
+    cuisine_preference: str | None = None
+    dietary_preference: str | None = None
+
+
+class AIRecipe(BaseModel):
+    name: str
+    description: str
+    ingredients: list[str]
+    steps: list[str]
+    prep_time_minutes: int | None = None
+    cook_time_minutes: int | None = None
+
+
+class AIRecipeResponse(BaseModel):
+    recipes: list[AIRecipe]
+    model: str
+
+
+def _normalize_ingredients(raw_ingredients: list[str] | str) -> list[str]:
+    if isinstance(raw_ingredients, str):
+        values = [item.strip() for item in re.split(r"[,\n]", raw_ingredients)]
+    else:
+        values = [item.strip() for item in raw_ingredients]
+    normalized: list[str] = []
+    seen = set()
+    for item in values:
+        key = item.lower()
+        if not item or key in seen:
+            continue
+        seen.add(key)
+        normalized.append(item)
+    return normalized
+
+
+def _strip_markdown_fences(text_value: str) -> str:
+    stripped = text_value.strip()
+    if stripped.startswith("```"):
+        stripped = re.sub(r"^```(?:json)?", "", stripped).strip()
+        stripped = re.sub(r"```$", "", stripped).strip()
+    return stripped
+
+
+async def _generate_recipes_with_groq(payload: AIRecipeRequest, ingredients: list[str]) -> AIRecipeResponse:
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="GROQ_API_KEY is not configured on the backend.",
+        )
+
+    model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+    system_prompt = (
+        "You are a recipe generator. "
+        "Always return valid JSON only with this exact schema: "
+        "{\"recipes\": [{\"name\": string, \"description\": string, \"ingredients\": string[], \"steps\": string[], "
+        "\"prep_time_minutes\": number|null, \"cook_time_minutes\": number|null}]}. "
+        "Do not include markdown, comments, or extra fields."
+    )
+    user_prompt = (
+        f"Generate up to {payload.max_recipes} practical recipes using these ingredients first: {', '.join(ingredients)}. "
+        f"Cuisine preference: {payload.cuisine_preference or 'none'}. "
+        f"Dietary preference: {payload.dietary_preference or 'none'}. "
+        "Keep steps concise and realistic for home cooking."
+    )
+
+    request_body: dict[str, Any] = {
+        "model": model,
+        "temperature": 0.4,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            response = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=request_body,
+            )
+            response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"LLM provider request failed with status {exc.response.status_code}.",
+        ) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Failed to reach LLM provider.") from exc
+
+    content = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+    if not content:
+        raise HTTPException(status_code=502, detail="LLM provider returned empty content.")
+
+    try:
+        parsed = json.loads(_strip_markdown_fences(content))
+        validated = AIRecipeResponse(
+            recipes=[AIRecipe(**recipe) for recipe in parsed.get("recipes", [])],
+            model=model,
+        )
+    except (json.JSONDecodeError, ValidationError, TypeError) as exc:
+        raise HTTPException(status_code=502, detail="LLM output was not valid recipe JSON.") from exc
+
+    if not validated.recipes:
+        raise HTTPException(status_code=502, detail="No recipes returned by LLM provider.")
+
+    return validated
+
+
+@app.post("/api/ai/recipes", response_model=AIRecipeResponse)
+async def generate_recipes(payload: AIRecipeRequest):
+    """Generate recipe suggestions from a list of ingredients."""
+    ingredients = _normalize_ingredients(payload.ingredients)
+    if not ingredients:
+        raise HTTPException(status_code=400, detail="Please provide at least one ingredient.")
+    return await _generate_recipes_with_groq(payload, ingredients)
 
 if __name__ == "__main__":
     import uvicorn

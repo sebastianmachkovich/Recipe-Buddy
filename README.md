@@ -43,6 +43,17 @@ source .venv/bin/activate          # macOS/Linux
 pip install -r requirements.txt
 ```
 
+### Configure AI Provider (Groq)
+
+Add this in `backend/.env`:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=llama-3.1-8b-instant
+```
+
+You can change `GROQ_MODEL` to any Groq-supported model.
+
 ### Frontend Setup
 Node.js required: https://nodejs.org/en/download
 ```bash
