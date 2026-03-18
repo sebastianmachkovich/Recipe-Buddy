@@ -149,35 +149,33 @@ function HomePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <input
+            id="upload-photo-input"
             ref={uploadInputRef}
             type="file"
             accept="image/*"
-            className="hidden"
+            className="absolute -left-[9999px] h-px w-px opacity-0"
             onChange={handleImageSelect}
           />
           <input
+            id="take-photo-input"
             ref={cameraInputRef}
             type="file"
             accept="image/*"
             capture="environment"
-            className="hidden"
+            className="absolute -left-[9999px] h-px w-px opacity-0"
             onChange={handleImageSelect}
           />
 
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              onClick={() => uploadInputRef.current?.click()}
-              disabled={isAnyMutationPending}
-            >
-              <Upload className="size-4" /> Upload Photo
+            <Button asChild variant="outline" disabled={isAnyMutationPending}>
+              <label htmlFor="upload-photo-input" className="cursor-pointer">
+                <Upload className="size-4" /> Upload Photo
+              </label>
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => cameraInputRef.current?.click()}
-              disabled={isAnyMutationPending}
-            >
-              <Camera className="size-4" /> Take Photo
+            <Button asChild variant="outline" disabled={isAnyMutationPending}>
+              <label htmlFor="take-photo-input" className="cursor-pointer">
+                <Camera className="size-4" /> Take Photo
+              </label>
             </Button>
           </div>
 
