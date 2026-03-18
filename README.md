@@ -156,4 +156,4 @@ npm run dev
 
 ---
 
-Built with ❤️ using Neon, FastAPI, and React
+Built using Neon, FastAPI, and React
