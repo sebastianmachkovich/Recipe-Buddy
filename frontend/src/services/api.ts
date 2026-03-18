@@ -2,7 +2,8 @@
 
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const browserHost = typeof window !== "undefined" ? window.location.hostname : "localhost";
+const API_URL = import.meta.env.VITE_API_URL || `http://${browserHost}:8000`;
 
 const api = axios.create({
   baseURL: API_URL,
@@ -80,6 +81,13 @@ export interface AIRecipeResponse {
   model: string;
 }
 
+export interface AIImageRecipeResponse {
+  detected_ingredients: string[];
+  recipes: AIRecipeSuggestion[];
+  vision_model: string;
+  recipe_model: string;
+}
+
 // Ingredient API
 export const ingredientsAPI = {
   getAll: (search?: string) =>
@@ -120,6 +128,13 @@ export const pantryAPI = {
 export const aiAPI = {
   generateRecipes: (data: AIRecipeRequest) =>
     api.post<AIRecipeResponse>("/api/ai/recipes", data),
+
+  generateRecipesFromImage: (formData: FormData) =>
+    api.post<AIImageRecipeResponse>("/api/ai/recipes/from-image", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }),
 };
 
 export default api;
