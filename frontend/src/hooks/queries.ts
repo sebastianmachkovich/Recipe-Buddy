@@ -143,10 +143,7 @@ export function useRemoveRecipe() {
       await recipesAPI.delete(id);
       qc.removeQueries({ queryKey: ["recipes", id] });
       qc.setQueryData(["planIds"], (ids: number[] | undefined) =>
-        ids?.filter((it) => it !== id),
-      );
-      qc.setQueryData(["feedIds"], (ids: number[] | undefined) =>
-        ids?.filter((it) => it !== id),
+          ids?.filter((it) => it !== id)
       );
       await qc.invalidateQueries({ queryKey: ["recipeIds"] });
     },
@@ -174,26 +171,6 @@ export function useRecipeIds() {
     queryFn: async () => {
       const response = await recipesAPI.getAll();
       return response.data.map((recipe) => recipe.id);
-    },
-  });
-}
-/*
-export function useFeedIds() {
-    return useQuery({
-        queryKey: ["feedIds"],
-        queryFn: () => qc.getQueryData(["feedIds"]) as number[],
-        enabled: true,
-        initialData: [1, -1, 5] as number[],
-    });
-}
-*/
-//Homepage reccomendations
-export function useFeedIds() {
-  return useQuery({
-    queryKey: ["feedIds"],
-    queryFn: async () => {
-      const response = await recipesAPI.getRandom();
-      return response.data.map((r) => r.id);
     },
   });
 }

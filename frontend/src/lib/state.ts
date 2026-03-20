@@ -257,6 +257,5 @@ qc.setQueryData(["recipes", it.id], it),
 );
 
 
-qc.setQueryData(["feedIds"], [1, -1, 5] as number[]);
 qc.setQueryData(["planIds"], [] as number[]);
 */

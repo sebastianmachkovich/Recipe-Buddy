@@ -1,4 +1,3 @@
-import RecommentationCard from "@/components/RecommendationCard";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,7 +11,6 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { Camera, Sparkles, Upload } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
-import { useFeedIds } from "@/hooks/queries";
 import {
   AIImageRecipeResponse,
   AIRecipeResponse,
@@ -51,7 +49,6 @@ function getApiErrorMessage(error: unknown): string | null {
 }
 
 function HomePage() {
-  const { data: recommendations, isLoading } = useFeedIds();
   const [ingredientsInput, setIngredientsInput] = useState("");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [detectedIngredients, setDetectedIngredients] = useState<string[]>([]);
@@ -135,7 +132,6 @@ function HomePage() {
     getApiErrorMessage(aiRecipesMutation.error) ||
     "Could not generate recipes right now.";
 
-  if (isLoading || !recommendations) return <div>Loading...</div>;
   return (
     <div className="mx-auto p-6 flex flex-col items-center gap-6 w-full">
       <Card className="w-full max-w-5xl">
@@ -256,10 +252,6 @@ function HomePage() {
           )}
         </CardContent>
       </Card>
-
-      {recommendations.map((id, i) => (
-        <RecommentationCard key={i} recipeId={id} orientation={i % 2 === 0} />
-      ))}
     </div>
   );
 }

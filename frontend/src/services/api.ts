@@ -129,8 +129,6 @@ export const recipesAPI = {
     api.put<Recipe>(`/recipes/${id}`, data),
 
   delete: (id: number) => api.delete(`/recipes/${id}`),
-  //For home page random recipes reccomendations
-  getRandom: () => api.get<Recipe[]>("/recipes/random"),
 };
 
 export const authAPI = {
