@@ -23,6 +23,8 @@ export interface Recipe {
   id: number;
   name: string;
   description: string | null;
+  imgUrl?: string; 
+  rating: number | null;
   instructions: string;
   prep_time: number | null;
   cook_time: number | null;
@@ -101,14 +103,23 @@ export const ingredientsAPI = {
 
 // Recipe API
 export const recipesAPI = {
-  getAll: () => api.get<Recipe[]>("/recipes/"),
+  getAll: () =>
+    api.get<Recipe[]>("/recipes/"),
 
-  getById: (id: number) => api.get<Recipe>(`/recipes/${id}`),
+  getById: (id: number) =>
+    api.get<Recipe>(`/recipes/${id}`),
 
-  create: (data: any) => api.post<Recipe>("/recipes/", data),
+  create: (data: Omit<Recipe, 'id' | 'created_at' | 'updated_at'>) =>
+    api.post<Recipe>("/recipes/", data),
 
-  suggest: (ingredientIds: number[]) =>
-    api.post<RecipeMatch[]>("/recipes/suggest", ingredientIds),
+  update: (id: number, data: Partial<Recipe>) =>
+    api.put<Recipe>(`/recipes/${id}`, data),
+
+  delete: (id: number) =>
+    api.delete(`/recipes/${id}`),
+  //For home page random recipes reccomendations
+  getRandom: () =>
+    api.get<Recipe[]>("/recipes/random"),
 };
 
 // Pantry API
@@ -136,5 +147,7 @@ export const aiAPI = {
       },
     }),
 };
+
+
 
 export default api;

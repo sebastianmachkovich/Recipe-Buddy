@@ -1,10 +1,11 @@
 """Recipe Buddy FastAPI Application - Minimal Setup."""
 
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi import File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
+from sqlalchemy import text, func
+from sqlalchemy.orm import Session
 import base64
 import json
 import os
@@ -21,13 +22,13 @@ db = next(get_db())
 Recipe.metadata.create_all(bind=engine)
 
 #Test Recipes
-"""
+'''
 soup_recipe = Recipe(
     name="Squash and Lentil Soup",
     description="A hearty soup made with lentils, vegetables, and spices.",
-    image_url="https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=400&h=300&fit=crop",
+    imgUrl="https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=400&h=300&fit=crop",
     rating=0,
-    ingredients=json.dumps([
+    ingredients=[
         {"id": 1, "name": "Lentils", "amount": 1, "unit": "unit"},
         {"id": 2, "name": "Onions", "amount": 1, "unit": "unit"},
         {"id": 3, "name": "Carrots", "amount": 1, "unit": "unit"},
@@ -35,12 +36,19 @@ soup_recipe = Recipe(
         {"id": 5, "name": "Garlic", "amount": 1, "unit": "unit"},
         {"id": 6, "name": "Ginger", "amount": 1, "unit": "unit"},
         {"id": 7, "name": "Chili Peppers", "amount": 1, "unit": "unit"},
-    ]),
-    steps=json.dumps([
-        "Step 1: Prep vegetables",
-        "Step 2: Cook lentils",
-        "Step 3: Combine and simmer"
-    ])
+    ],
+    steps=[
+        {
+            "id": 1,
+            "description": "Cook lentils",
+            "time": {"hours": 1, "minutes": 30},
+        },
+        {
+            "id": 2,
+            "description": "Cook vegetables",
+            "time": {"hours": 1, "minutes": 30},
+        },
+    ]
 )
 
 # add and commit
@@ -51,7 +59,8 @@ db.commit()
 db.close()
 
 print("Recipe added successfully!")
-"""
+
+'''
 recipe = db.query(Recipe).first()
 
 # Initialize FastAPI app
@@ -95,6 +104,62 @@ def health_check():
 def test_endpoint():
     """Test endpoint to verify API is working."""
     return {"message": "API is working! Start building your features here."}
+
+@app.get("/recipes/")
+def get_recipes():
+    recipes = db.query(Recipe).all()
+
+    return [
+        {
+            "id": r.id,
+            "name": r.name,
+            "description": r.description,
+            "imgUrl": r.imgUrl,  
+            "rating": r.rating,
+
+            "ingredients": [
+                {
+                    "id": i["id"],
+                    "name": i["name"],
+                    "amount": i["amount"],
+                    "unit": i["unit"],  
+                }
+                for i in (r.ingredients or [])
+            ],
+
+            "steps": [
+                {
+                    "id": s["id"],
+                    "description": s["description"],
+                    "time": {
+                        "hours": s["time"]["hours"],
+                        "minutes": s["time"]["minutes"],
+                    },
+                }
+                for s in (r.steps or [])
+            ],
+        }
+        for r in recipes
+    ]
+
+@app.get("/recipes/random")
+def get_random_recipes(db: Session = Depends(get_db)):
+    return (
+        db.query(Recipe)
+        .order_by(func.random())
+        .limit(3)
+        .all()
+    )
+
+@app.get("/recipes/{id}")
+def get_recipe(id: int):
+    recipe = db.query(Recipe).filter(Recipe.id == id).first()
+
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    return recipe
+
 
 
 class AIRecipeRequest(BaseModel):

@@ -42,6 +42,7 @@ export type Step = {
     }
 };
 
+
 export const recipes_DummyData = [
     {
         id: 1,
@@ -249,9 +250,13 @@ export const qc = new QueryClient({
 // Note: The AI suggestions and user recipes are stored in the same cache key.
 //       This is fine because all AI suggestions have negative IDs, and all
 //       user recipes have positive IDs.
+/*
 recipes_DummyData.forEach((it) => qc.setQueryData(["recipes", it.id], it));
 aiGeneratedRecipes_DummyData.forEach((it) =>
-  qc.setQueryData(["recipes", it.id], it),
+qc.setQueryData(["recipes", it.id], it),
 );
+
+
 qc.setQueryData(["feedIds"], [1, -1, 5] as number[]);
 qc.setQueryData(["planIds"], [] as number[]);
+*/

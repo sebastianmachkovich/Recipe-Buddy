@@ -35,26 +35,46 @@ export function AddRecipeCard() {
 }
 
 export function RecipeCard({ recipeId }: { recipeId: number }) {
-  const { data: recipe } = useRecipe(recipeId);
+  const { data: recipe, isLoading, error } = useRecipe(recipeId);
+  console.log({ recipeId, recipe, isLoading, error });
+if (isLoading || !recipe) {
+    return (
+      <Card className="h-full flex flex-col items-center justify-center">
+        <span className="text-sm text-muted-foreground">Loading...</span>
+      </Card>
+    );
+  }
 
+  if (error) {
+    return (
+      <Card className="h-full flex flex-col items-center justify-center">
+        <span className="text-sm text-red-500">Failed to load</span>
+      </Card>
+    );
+  }
+  console.log("Rendering RecipeCard with recipe:", recipe);
+  console.log(recipe.imgUrl);
   return (
     <EditRecipeDialogProvider recipeId={recipeId}>
       <Card className="group h-full flex flex-col pt-0 overflow-hidden select-none hover:bg-accent hover:text-accent-foreground dark:bg-card dark:border-input dark:hover:bg-input cursor-pointer">
         <img
-          src={recipe!.imgUrl || BowlWhisk}
-          alt={recipe!.name}
+          src={recipe.imgUrl || BowlWhisk}
+          alt={recipe.name}
           className="aspect-[4/3] w-full object-cover rounded-t-lg"
         />
+
         <CardHeader className="flex-shrink-0 px-6 pt-6">
           <CardTitle className="font-bold select-none">
-            {recipe!.name}
+            {recipe.name}
           </CardTitle>
+
           <div className="relative h-16 overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]">
             <CardDescription className="absolute inset-0 select-none">
-              {recipe!.description}
+              {recipe.description}
             </CardDescription>
           </div>
         </CardHeader>
+
         <RecipeCardFooter recipeId={recipeId} onLeft={false} />
       </Card>
     </EditRecipeDialogProvider>

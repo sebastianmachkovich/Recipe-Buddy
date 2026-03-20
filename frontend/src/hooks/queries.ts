@@ -1,13 +1,26 @@
 import { qc, RecipeCardData, recipes_DummyData } from "@/lib/state";
 import { useMutation, useQuery } from "@tanstack/react-query"
+import { recipesAPI } from "@/services/api";
+
 
 export function useRecipe(id?: number) {
     return useQuery({
         queryKey: ["recipes", id],
-        queryFn: () => id === undefined
-            ? undefined
-            : qc.getQueryData(["recipes", id]) as RecipeCardData,
+        queryFn: async () => {
+            const response = await recipesAPI.getById(id!);
+            return response.data;
+        },
         enabled: !!id,
+    });
+}
+
+export function useAllRecipes() {
+    return useQuery({
+        queryKey: ["recipes"],
+        queryFn: async () => {
+            const response = await recipesAPI.getAll();
+            return response.data;
+        },
     });
 }
 
@@ -47,20 +60,32 @@ export function useUpdateRecipe() {
 export function useRecipeIds() {
     return useQuery({
         queryKey: ["recipeIds"],
-        queryFn: () => qc.getQueriesData({ queryKey: ["recipes"] })
-            .map(([, data]) => (data as RecipeCardData)?.id)
-            .filter((it) => it > 0),
-        enabled: true,
-        initialData: recipes_DummyData.map((it) => it.id),
+        queryFn: async () => {
+            const response = await recipesAPI.getAll();
+            console.log(response.data);
+            console.log("Am I executing?");
+            return response.data.map((recipe) => recipe.id);
+        },
     });
 }
-
+/*
 export function useFeedIds() {
     return useQuery({
         queryKey: ["feedIds"],
         queryFn: () => qc.getQueryData(["feedIds"]) as number[],
         enabled: true,
         initialData: [1, -1, 5] as number[],
+    });
+}
+*/
+//Homepage reccomendations
+export function useFeedIds() {
+    return useQuery({
+        queryKey: ["feedIds"],
+        queryFn: async () => {
+            const response = await recipesAPI.getRandom();
+            return response.data.map(r => r.id);
+        },
     });
 }
 

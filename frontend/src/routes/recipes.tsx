@@ -3,7 +3,14 @@ import { useRecipeIds } from "@/hooks/queries";
 import { createFileRoute } from "@tanstack/react-router";
 
 function RecipesPage() {
-  const { data: recipeIds } = useRecipeIds();
+  const { data: recipeIds, isLoading, error } = useRecipeIds();
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error loading recipes</div>;
+  if (!recipeIds) return <div>No recipes found</div>;
+  
+  console.log(error);
+  console.log(recipeIds); // now defined
 
   return (
     <div className="container mx-auto p-6">
