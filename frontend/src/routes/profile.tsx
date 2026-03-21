@@ -22,10 +22,6 @@ function ProfilePage() {
             <span className="font-medium">Email:</span>{" "}
             {user?.email ?? "Unknown"}
           </div>
-          <div>
-            <span className="font-medium">User ID:</span>{" "}
-            {user?.id ?? "Unknown"}
-          </div>
         </CardContent>
       </Card>
     </div>
