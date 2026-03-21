@@ -1,8 +1,17 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { House, LogOut, ReceiptText } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { House, LogOut, ReceiptText, User } from "lucide-react";
 import { useState } from "react";
 import {
   Sidebar,
@@ -22,7 +31,6 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import "../index.css";
 import { qc } from "@/lib/state";
@@ -68,6 +76,7 @@ function RootLayout() {
   const isAuthPage = pathname === "/";
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -90,7 +99,6 @@ function RootLayout() {
           {isAuthPage ? (
             <main className="min-h-screen bg-background">
               <Outlet />
-              <TanStackRouterDevtools />
             </main>
           ) : (
             <SidebarProvider defaultOpen={false}>
@@ -112,21 +120,60 @@ function RootLayout() {
                   </SidebarGroup>
                 </SidebarContent>
                 <div className="p-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleLogout}
-                    disabled={isLoggingOut}
-                  >
-                    <LogOut className="size-4" />
-                  </Button>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <Link to="/profile">
+                        <SidebarMenuButton
+                          tooltip="Profile"
+                          className="cursor-pointer"
+                        >
+                          <User className="size-4" />
+                        </SidebarMenuButton>
+                      </Link>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <AlertDialog
+                        open={isLogoutDialogOpen}
+                        onOpenChange={setIsLogoutDialogOpen}
+                      >
+                        <SidebarMenuButton
+                          tooltip="Log out"
+                          className="cursor-pointer"
+                          onClick={() => setIsLogoutDialogOpen(true)}
+                          disabled={isLoggingOut}
+                          aria-label="Log out"
+                        >
+                          <LogOut className="size-4" />
+                        </SidebarMenuButton>
+                        <AlertDialogContent size="sm">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Log out?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Would you like to log out or stay signed in?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isLoggingOut}>
+                              Stay signed in
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              variant="destructive"
+                              disabled={isLoggingOut}
+                              onClick={handleLogout}
+                            >
+                              {isLoggingOut ? "Logging out..." : "Log out"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
                 </div>
               </Sidebar>
               <SidebarInset className="flex flex-row overflow-hidden">
                 <SidebarProvider defaultOpen={true}>
                   <main className="flex-1 overflow-y-auto p-4">
                     <Outlet />
-                    <TanStackRouterDevtools />
                   </main>
                   <PlanSidebar />
                 </SidebarProvider>
