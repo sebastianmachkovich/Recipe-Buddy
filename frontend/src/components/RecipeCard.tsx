@@ -27,7 +27,7 @@ export function AddRecipeCard() {
           <PlusIcon className="h-12 w-12" />
           <span className="text-sm font-medium select-none">Add Recipe</span>
         </div>
-        <CardHeader className="flex-shrink-0"></CardHeader>
+        <CardHeader className="shrink-0"></CardHeader>
       </Card>
     </EditRecipeDialogProvider>
   );
@@ -59,13 +59,13 @@ export function RecipeCard({ recipeId }: { recipeId: number }) {
         <img
           src={recipe.imgUrl || BowlWhisk}
           alt={recipe.name}
-          className="aspect-[4/3] w-full object-cover rounded-t-lg"
+          className="aspect-4/3 w-full object-cover rounded-t-lg"
         />
 
-        <CardHeader className="flex-shrink-0 px-6 pt-6">
+        <CardHeader className="shrink-0 px-6 pt-6">
           <CardTitle className="font-bold select-none">{recipe.name}</CardTitle>
 
-          <div className="relative h-16 overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]">
+          <div className="relative h-16 overflow-hidden mask-[linear-gradient(to_bottom,black_70%,transparent_100%)]">
             <CardDescription className="absolute inset-0 select-none">
               {recipe.description}
             </CardDescription>

@@ -30,7 +30,7 @@ export default function RecommendationCard({
           <CardTitle className="px-6 font-bold select-none line-clamp-1">
             {recipe.name}
           </CardTitle>
-          <div className="relative flex-1 overflow-hidden px-6 [mask-image:linear-gradient(to_bottom,black_80%,transparent_100%)]">
+          <div className="relative flex-1 overflow-hidden px-6 mask-[linear-gradient(to_bottom,black_80%,transparent_100%)]">
             <CardDescription className="select-none">
               <p>{recipe.description}</p>
               {recipe.ingredients.length > 0 && (
