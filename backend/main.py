@@ -1,67 +1,32 @@
 """Recipe Buddy FastAPI Application - Minimal Setup."""
 
 
-from fastapi import FastAPI, Depends
-from fastapi import File, Form, HTTPException, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text, func
-from sqlalchemy.orm import Session
+from datetime import datetime, timedelta, timezone
+
 import base64
 import json
 import os
 import re
-from typing import Any
+from typing import Any, cast
 
+import bcrypt
 import httpx
+import jwt
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ValidationError
-from app.database import *
-from app.models import Recipe
-db = next(get_db())
+from sqlalchemy import func, or_
+from sqlalchemy.orm import Session
+from app.database import Base, engine, get_db
+from app.models import Recipe, User, UserPlanItem, UserRecipeOwnership
 
-#Create tables if they don't exist
-Recipe.metadata.create_all(bind=engine)
+# Create tables if they don't exist.
+Base.metadata.create_all(bind=engine)
 
-#Test Recipes
-'''
-soup_recipe = Recipe(
-    name="Squash and Lentil Soup",
-    description="A hearty soup made with lentils, vegetables, and spices.",
-    imgUrl="https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=400&h=300&fit=crop",
-    rating=0,
-    ingredients=[
-        {"id": 1, "name": "Lentils", "amount": 1, "unit": "unit"},
-        {"id": 2, "name": "Onions", "amount": 1, "unit": "unit"},
-        {"id": 3, "name": "Carrots", "amount": 1, "unit": "unit"},
-        {"id": 4, "name": "Potatoes", "amount": 1, "unit": "unit"},
-        {"id": 5, "name": "Garlic", "amount": 1, "unit": "unit"},
-        {"id": 6, "name": "Ginger", "amount": 1, "unit": "unit"},
-        {"id": 7, "name": "Chili Peppers", "amount": 1, "unit": "unit"},
-    ],
-    steps=[
-        {
-            "id": 1,
-            "description": "Cook lentils",
-            "time": {"hours": 1, "minutes": 30},
-        },
-        {
-            "id": 2,
-            "description": "Cook vegetables",
-            "time": {"hours": 1, "minutes": 30},
-        },
-    ]
-)
-
-# add and commit
-db.add(soup_recipe)
-db.commit()
-
-# close session
-db.close()
-
-print("Recipe added successfully!")
-
-'''
-recipe = db.query(Recipe).first()
+AUTH_COOKIE_NAME = "recipe_buddy_access_token"
+AUTH_ALGORITHM = "HS256"
+AUTH_EXPIRES_HOURS = 24
+AUTH_SECRET = os.getenv("AUTH_SECRET_KEY", "recipe-buddy-dev-secret-change-me")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -92,7 +57,6 @@ def root():
         "message": "Welcome to Recipe Buddy API",
         "status": "running",
         "docs": "/docs",
-        "testdata": recipe.name if recipe else "No recipes found"
     }
 
 @app.get("/health")
@@ -105,60 +69,350 @@ def test_endpoint():
     """Test endpoint to verify API is working."""
     return {"message": "API is working! Start building your features here."}
 
-@app.get("/recipes/")
-def get_recipes():
-    recipes = db.query(Recipe).all()
+class AuthRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=6, max_length=128)
 
-    return [
-        {
-            "id": r.id,
-            "name": r.name,
-            "description": r.description,
-            "imgUrl": r.imgUrl,  
-            "rating": r.rating,
 
-            "ingredients": [
-                {
-                    "id": i["id"],
-                    "name": i["name"],
-                    "amount": i["amount"],
-                    "unit": i["unit"],  
-                }
-                for i in (r.ingredients or [])
-            ],
+class AuthUserResponse(BaseModel):
+    id: int
+    email: str
 
-            "steps": [
-                {
-                    "id": s["id"],
-                    "description": s["description"],
-                    "time": {
-                        "hours": s["time"]["hours"],
-                        "minutes": s["time"]["minutes"],
-                    },
-                }
-                for s in (r.steps or [])
-            ],
-        }
-        for r in recipes
-    ]
 
-@app.get("/recipes/random")
-def get_random_recipes(db: Session = Depends(get_db)):
+class RecipeIngredientPayload(BaseModel):
+    id: int
+    name: str
+    amount: float | int
+    unit: str | None = None
+
+
+class RecipeStepPayload(BaseModel):
+    id: int
+    description: str
+    time: dict[str, int] | None = None
+
+
+class RecipeWritePayload(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = None
+    imgUrl: str | None = None
+    rating: int | None = Field(default=0, ge=0, le=5)
+    ingredients: list[RecipeIngredientPayload] = Field(default_factory=list)
+    steps: list[RecipeStepPayload] = Field(default_factory=list)
+
+
+def _normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def _hash_password(raw_password: str) -> str:
+    return bcrypt.hashpw(raw_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def _verify_password(raw_password: str, hashed_password: str) -> bool:
+    return bcrypt.checkpw(raw_password.encode("utf-8"), hashed_password.encode("utf-8"))
+
+
+def _create_access_token(user: User) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(user.id),
+        "email": user.email,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(hours=AUTH_EXPIRES_HOURS)).timestamp()),
+    }
+    return jwt.encode(payload, AUTH_SECRET, algorithm=AUTH_ALGORITHM)
+
+
+def _decode_access_token(token: str) -> dict[str, Any]:
+    try:
+        payload: dict[str, Any] = jwt.decode(token, AUTH_SECRET, algorithms=[AUTH_ALGORITHM])
+    except jwt.PyJWTError as exc:
+        raise HTTPException(status_code=401, detail="Invalid or expired authentication token") from exc
+    return payload
+
+
+def _set_auth_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=AUTH_EXPIRES_HOURS * 60 * 60,
+    )
+
+
+def _clear_auth_cookie(response: Response) -> None:
+    response.delete_cookie(key=AUTH_COOKIE_NAME)
+
+
+def _serialize_recipe(recipe: Recipe) -> dict[str, Any]:
+    return {
+        "id": recipe.id,
+        "name": recipe.name,
+        "description": recipe.description,
+        "imgUrl": recipe.imgUrl,
+        "rating": recipe.rating,
+        "ingredients": recipe.ingredients or [],
+        "steps": recipe.steps or [],
+    }
+
+
+def _get_accessible_recipe(db: Session, user: User, recipe_id: int) -> Recipe | None:
+    owned = (
+        db.query(Recipe)
+        .join(UserRecipeOwnership, UserRecipeOwnership.recipe_id == Recipe.id)
+        .filter(Recipe.id == recipe_id, UserRecipeOwnership.user_id == user.id)
+        .first()
+    )
+    if owned:
+        return owned
     return (
         db.query(Recipe)
+        .outerjoin(UserRecipeOwnership, UserRecipeOwnership.recipe_id == Recipe.id)
+        .filter(Recipe.id == recipe_id, UserRecipeOwnership.id.is_(None))
+        .first()
+    )
+
+
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
+    token = request.cookies.get(AUTH_COOKIE_NAME)
+    if not token:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    payload = _decode_access_token(token)
+    raw_user_id = payload.get("sub")
+    if raw_user_id is None:
+        raise HTTPException(status_code=401, detail="Invalid authentication token")
+
+    user = db.query(User).filter(User.id == int(raw_user_id)).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
+def get_optional_current_user(request: Request, db: Session = Depends(get_db)) -> User | None:
+    token = request.cookies.get(AUTH_COOKIE_NAME)
+    if not token:
+        return None
+
+    try:
+        payload = _decode_access_token(token)
+    except HTTPException:
+        return None
+
+    raw_user_id = payload.get("sub")
+    if raw_user_id is None:
+        return None
+
+    user = db.query(User).filter(User.id == int(raw_user_id)).first()
+    return user
+
+
+@app.post("/auth/signup", response_model=AuthUserResponse)
+def signup(payload: AuthRequest, response: Response, db: Session = Depends(get_db)):
+    email = _normalize_email(payload.email)
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        raise HTTPException(status_code=409, detail="Email is already in use")
+
+    user = User(email=email, password_hash=_hash_password(payload.password))
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    token = _create_access_token(user)
+    _set_auth_cookie(response, token)
+    return AuthUserResponse(id=cast(int, user.id), email=cast(str, user.email))
+
+
+@app.post("/auth/login", response_model=AuthUserResponse)
+def login(payload: AuthRequest, response: Response, db: Session = Depends(get_db)):
+    email = _normalize_email(payload.email)
+    user = db.query(User).filter(User.email == email).first()
+    if not user or not _verify_password(payload.password, str(user.password_hash)):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    token = _create_access_token(user)
+    _set_auth_cookie(response, token)
+    return AuthUserResponse(id=cast(int, user.id), email=cast(str, user.email))
+
+
+@app.post("/auth/logout")
+def logout(response: Response):
+    _clear_auth_cookie(response)
+    return {"message": "Logged out"}
+
+
+@app.get("/auth/me", response_model=AuthUserResponse)
+def auth_me(current_user: User = Depends(get_current_user)):
+    return AuthUserResponse(id=cast(int, current_user.id), email=cast(str, current_user.email))
+
+
+@app.get("/auth/status")
+def auth_status(current_user: User | None = Depends(get_optional_current_user)):
+    if not current_user:
+        return {"authenticated": False, "user": None}
+    return {
+        "authenticated": True,
+        "user": {
+            "id": cast(int, current_user.id),
+            "email": cast(str, current_user.email),
+        },
+    }
+
+
+@app.get("/recipes/")
+def get_recipes(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    recipes = (
+        db.query(Recipe)
+        .outerjoin(UserRecipeOwnership, UserRecipeOwnership.recipe_id == Recipe.id)
+        .filter(or_(UserRecipeOwnership.user_id == current_user.id, UserRecipeOwnership.id.is_(None)))
+        .all()
+    )
+    return [_serialize_recipe(recipe) for recipe in recipes]
+
+
+@app.get("/recipes/random")
+def get_random_recipes(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    recipes = (
+        db.query(Recipe)
+        .outerjoin(UserRecipeOwnership, UserRecipeOwnership.recipe_id == Recipe.id)
+        .filter(or_(UserRecipeOwnership.user_id == current_user.id, UserRecipeOwnership.id.is_(None)))
         .order_by(func.random())
         .limit(3)
         .all()
     )
+    return [_serialize_recipe(recipe) for recipe in recipes]
+
 
 @app.get("/recipes/{id}")
-def get_recipe(id: int):
-    recipe = db.query(Recipe).filter(Recipe.id == id).first()
+def get_recipe(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    recipe = _get_accessible_recipe(db, current_user, id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return _serialize_recipe(recipe)
 
+
+@app.post("/recipes/")
+def create_recipe(
+    payload: RecipeWritePayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    recipe = Recipe(
+        name=payload.name,
+        description=payload.description,
+        imgUrl=payload.imgUrl,
+        rating=payload.rating,
+        ingredients=[item.model_dump() for item in payload.ingredients],
+        steps=[item.model_dump() for item in payload.steps],
+    )
+    db.add(recipe)
+    db.commit()
+    db.refresh(recipe)
+
+    ownership = UserRecipeOwnership(user_id=current_user.id, recipe_id=recipe.id)
+    db.add(ownership)
+    db.commit()
+
+    return _serialize_recipe(recipe)
+
+
+@app.put("/recipes/{id}")
+def update_recipe(
+    id: int,
+    payload: RecipeWritePayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ownership = (
+        db.query(UserRecipeOwnership)
+        .filter(UserRecipeOwnership.recipe_id == id, UserRecipeOwnership.user_id == current_user.id)
+        .first()
+    )
+    if not ownership:
+        raise HTTPException(status_code=403, detail="You can only edit recipes you own")
+
+    recipe = db.query(Recipe).filter(Recipe.id == id).first()
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
-    return recipe
+    setattr(recipe, "name", payload.name)
+    setattr(recipe, "description", payload.description)
+    setattr(recipe, "imgUrl", payload.imgUrl)
+    setattr(recipe, "rating", payload.rating)
+    setattr(recipe, "ingredients", [item.model_dump() for item in payload.ingredients])
+    setattr(recipe, "steps", [item.model_dump() for item in payload.steps])
+    db.commit()
+    db.refresh(recipe)
+    return _serialize_recipe(recipe)
+
+
+@app.delete("/recipes/{id}")
+def delete_recipe(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    ownership = (
+        db.query(UserRecipeOwnership)
+        .filter(UserRecipeOwnership.recipe_id == id, UserRecipeOwnership.user_id == current_user.id)
+        .first()
+    )
+    if not ownership:
+        raise HTTPException(status_code=403, detail="You can only delete recipes you own")
+
+    recipe = db.query(Recipe).filter(Recipe.id == id).first()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    db.delete(ownership)
+    db.delete(recipe)
+    db.commit()
+    return {"deleted": True}
+
+
+@app.get("/plan/")
+def get_user_plan(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    items = db.query(UserPlanItem).filter(UserPlanItem.user_id == current_user.id).all()
+    return [item.recipe_id for item in items]
+
+
+@app.post("/plan/{recipe_id}")
+def add_to_user_plan(
+    recipe_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    recipe = _get_accessible_recipe(db, current_user, recipe_id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    existing_item = (
+        db.query(UserPlanItem)
+        .filter(UserPlanItem.user_id == current_user.id, UserPlanItem.recipe_id == recipe_id)
+        .first()
+    )
+    if not existing_item:
+        db.add(UserPlanItem(user_id=current_user.id, recipe_id=recipe_id))
+        db.commit()
+
+    return {"recipe_id": recipe_id}
+
+
+@app.delete("/plan/{recipe_id}")
+def remove_from_user_plan(
+    recipe_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    item = (
+        db.query(UserPlanItem)
+        .filter(UserPlanItem.user_id == current_user.id, UserPlanItem.recipe_id == recipe_id)
+        .first()
+    )
+    if item:
+        db.delete(item)
+        db.commit()
+    return {"deleted": True}
 
 
 
@@ -587,7 +841,10 @@ async def _detect_ingredients_from_image(file: UploadFile) -> tuple[list[str], s
 
 
 @app.post("/api/ai/recipes", response_model=AIRecipeResponse)
-async def generate_recipes(payload: AIRecipeRequest):
+async def generate_recipes(
+    payload: AIRecipeRequest,
+    current_user: User = Depends(get_current_user),
+):
     """Generate recipe suggestions from a list of ingredients."""
     ingredients = _normalize_ingredients(payload.ingredients)
     if not ingredients:
@@ -601,6 +858,7 @@ async def generate_recipes_from_image(
     max_recipes: int = Form(default=5),
     cuisine_preference: str | None = Form(default=None),
     dietary_preference: str | None = Form(default=None),
+    current_user: User = Depends(get_current_user),
 ):
     """Detect ingredients from an image, then generate recipes from those ingredients."""
     if max_recipes < 1 or max_recipes > 10:

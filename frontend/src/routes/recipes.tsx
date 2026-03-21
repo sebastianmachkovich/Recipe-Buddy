@@ -1,6 +1,7 @@
 import { AddRecipeCard, RecipeCard } from "@/components/RecipeCard";
 import { useRecipeIds } from "@/hooks/queries";
-import { createFileRoute } from "@tanstack/react-router";
+import { authAPI } from "@/services/api";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 function RecipesPage() {
   const { data: recipeIds, isLoading, error } = useRecipeIds();
@@ -8,7 +9,7 @@ function RecipesPage() {
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error loading recipes</div>;
   if (!recipeIds) return <div>No recipes found</div>;
-  
+
   console.log(error);
   console.log(recipeIds); // now defined
 
@@ -24,4 +25,16 @@ function RecipesPage() {
   );
 }
 
-export const Route = createFileRoute("/recipes")({ component: RecipesPage });
+export const Route = createFileRoute("/recipes")({
+  beforeLoad: async () => {
+    try {
+      const response = await authAPI.status();
+      if (!response.data.authenticated) {
+        throw redirect({ to: "/" });
+      }
+    } catch {
+      throw redirect({ to: "/" });
+    }
+  },
+  component: RecipesPage,
+});

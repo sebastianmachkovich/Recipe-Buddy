@@ -2,11 +2,13 @@
 
 import axios from "axios";
 
-const browserHost = typeof window !== "undefined" ? window.location.hostname : "localhost";
+const browserHost =
+  typeof window !== "undefined" ? window.location.hostname : "localhost";
 const API_URL = import.meta.env.VITE_API_URL || `http://${browserHost}:8000`;
 
 const api = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -23,24 +25,26 @@ export interface Recipe {
   id: number;
   name: string;
   description: string | null;
-  imgUrl?: string; 
+  imgUrl: string | null;
   rating: number | null;
-  instructions: string;
-  prep_time: number | null;
-  cook_time: number | null;
-  servings: number | null;
-  difficulty: string | null;
-  cuisine: string | null;
-  created_at: string;
-  updated_at: string | null;
   ingredients: RecipeIngredient[];
+  steps: RecipeStep[];
 }
 
 export interface RecipeIngredient {
   id: number;
   name: string;
-  category: string | null;
-  quantity: string | null;
+  amount: number;
+  unit: string | null;
+}
+
+export interface RecipeStep {
+  id: number;
+  description: string;
+  time?: {
+    hours: number;
+    minutes: number;
+  };
 }
 
 export interface RecipeMatch {
@@ -90,6 +94,18 @@ export interface AIImageRecipeResponse {
   recipe_model: string;
 }
 
+export interface AuthUser {
+  id: number;
+  email: string;
+}
+
+export interface AuthStatusResponse {
+  authenticated: boolean;
+  user: AuthUser | null;
+}
+
+export type RecipeWritePayload = Omit<Recipe, "id">;
+
 // Ingredient API
 export const ingredientsAPI = {
   getAll: (search?: string) =>
@@ -103,23 +119,40 @@ export const ingredientsAPI = {
 
 // Recipe API
 export const recipesAPI = {
-  getAll: () =>
-    api.get<Recipe[]>("/recipes/"),
+  getAll: () => api.get<Recipe[]>("/recipes/"),
 
-  getById: (id: number) =>
-    api.get<Recipe>(`/recipes/${id}`),
+  getById: (id: number) => api.get<Recipe>(`/recipes/${id}`),
 
-  create: (data: Omit<Recipe, 'id' | 'created_at' | 'updated_at'>) =>
-    api.post<Recipe>("/recipes/", data),
+  create: (data: RecipeWritePayload) => api.post<Recipe>("/recipes/", data),
 
-  update: (id: number, data: Partial<Recipe>) =>
+  update: (id: number, data: RecipeWritePayload) =>
     api.put<Recipe>(`/recipes/${id}`, data),
 
-  delete: (id: number) =>
-    api.delete(`/recipes/${id}`),
+  delete: (id: number) => api.delete(`/recipes/${id}`),
   //For home page random recipes reccomendations
-  getRandom: () =>
-    api.get<Recipe[]>("/recipes/random"),
+  getRandom: () => api.get<Recipe[]>("/recipes/random"),
+};
+
+export const authAPI = {
+  signup: (data: { email: string; password: string }) =>
+    api.post<AuthUser>("/auth/signup", data),
+
+  login: (data: { email: string; password: string }) =>
+    api.post<AuthUser>("/auth/login", data),
+
+  logout: () => api.post<{ message: string }>("/auth/logout"),
+
+  me: () => api.get<AuthUser>("/auth/me"),
+
+  status: () => api.get<AuthStatusResponse>("/auth/status"),
+};
+
+export const planAPI = {
+  getAll: () => api.get<number[]>("/plan/"),
+  add: (recipeId: number) =>
+    api.post<{ recipe_id: number }>(`/plan/${recipeId}`),
+  remove: (recipeId: number) =>
+    api.delete<{ deleted: boolean }>(`/plan/${recipeId}`),
 };
 
 // Pantry API
@@ -147,7 +180,5 @@ export const aiAPI = {
       },
     }),
 };
-
-
 
 export default api;

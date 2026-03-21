@@ -15,7 +15,6 @@ import {
   useRemoveFromPlan,
   usePlanIds,
   useRecipe,
-  useUpdateRecipe,
 } from "@/hooks/queries";
 import { useMemo } from "react";
 import { StarRating } from "./StarRating";
@@ -37,7 +36,7 @@ export function AddRecipeCard() {
 export function RecipeCard({ recipeId }: { recipeId: number }) {
   const { data: recipe, isLoading, error } = useRecipe(recipeId);
   console.log({ recipeId, recipe, isLoading, error });
-if (isLoading || !recipe) {
+  if (isLoading || !recipe) {
     return (
       <Card className="h-full flex flex-col items-center justify-center">
         <span className="text-sm text-muted-foreground">Loading...</span>
@@ -64,9 +63,7 @@ if (isLoading || !recipe) {
         />
 
         <CardHeader className="flex-shrink-0 px-6 pt-6">
-          <CardTitle className="font-bold select-none">
-            {recipe.name}
-          </CardTitle>
+          <CardTitle className="font-bold select-none">{recipe.name}</CardTitle>
 
           <div className="relative h-16 overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]">
             <CardDescription className="absolute inset-0 select-none">
