@@ -1,7 +1,3 @@
-"""Database configuration - Ready for when you need it."""
-
-#Uncomment when you're ready to use the database:
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 import os
