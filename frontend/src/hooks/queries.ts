@@ -1,53 +1,11 @@
-import { qc, IngredientUnit, RecipeCardData } from "@/lib/state";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   authAPI,
   planAPI,
+  qc,
   recipesAPI,
   type Recipe,
-  type RecipeWritePayload,
 } from "@/services/api";
-
-function toRecipeCardData(recipe: Recipe): RecipeCardData {
-  return {
-    id: recipe.id,
-    name: recipe.name,
-    description: recipe.description ?? "",
-    imgUrl: recipe.imgUrl ?? "",
-    rating: recipe.rating ?? 0,
-    ingredients: recipe.ingredients.map((ingredient) => ({
-      id: ingredient.id,
-      name: ingredient.name,
-      amount: ingredient.amount,
-      unit: ingredient.unit ? (ingredient.unit as IngredientUnit) : undefined,
-    })),
-    steps: recipe.steps.map((step) => ({
-      id: step.id,
-      description: step.description,
-      time: step.time,
-    })),
-  };
-}
-
-function toRecipeWritePayload(recipe: RecipeCardData): RecipeWritePayload {
-  return {
-    name: recipe.name,
-    description: recipe.description,
-    imgUrl: recipe.imgUrl,
-    rating: recipe.rating,
-    ingredients: recipe.ingredients.map((ingredient) => ({
-      id: ingredient.id,
-      name: ingredient.name,
-      amount: ingredient.amount,
-      unit: ingredient.unit ?? null,
-    })),
-    steps: recipe.steps.map((step) => ({
-      id: step.id,
-      description: step.description,
-      time: step.time,
-    })),
-  };
-}
 
 export function useCurrentUser() {
   return useQuery({
@@ -109,7 +67,7 @@ export function useRecipe(id?: number) {
     queryKey: ["recipes", id],
     queryFn: async () => {
       const response = await recipesAPI.getById(id!);
-      return toRecipeCardData(response.data);
+      return response.data;
     },
     enabled: !!id,
   });
@@ -120,16 +78,17 @@ export function useAllRecipes() {
     queryKey: ["recipes"],
     queryFn: async () => {
       const response = await recipesAPI.getAll();
-      return response.data.map(toRecipeCardData);
+      return response.data;
     },
   });
 }
 
 export function useAddRecipe() {
   return useMutation({
-    mutationFn: async (recipe: RecipeCardData) => {
-      const response = await recipesAPI.create(toRecipeWritePayload(recipe));
-      const savedRecipe = toRecipeCardData(response.data);
+    mutationFn: async (recipe: Recipe) => {
+      const { id, ...rest } = recipe;
+      const response = await recipesAPI.create(rest);
+      const savedRecipe = response.data;
       qc.setQueryData(["recipes", savedRecipe.id], savedRecipe);
       await qc.invalidateQueries({ queryKey: ["recipeIds"] });
       return savedRecipe;
@@ -152,12 +111,13 @@ export function useRemoveRecipe() {
 
 export function useUpdateRecipe() {
   return useMutation({
-    mutationFn: async (recipe: RecipeCardData) => {
+    mutationFn: async (recipe: Recipe) => {
+      const { id, ...rest } = recipe;
       const response = await recipesAPI.update(
-        recipe.id,
-        toRecipeWritePayload(recipe),
+        id,
+        rest,
       );
-      const savedRecipe = toRecipeCardData(response.data);
+      const savedRecipe = response.data;
       qc.setQueryData(["recipes", savedRecipe.id], savedRecipe);
       await qc.invalidateQueries({ queryKey: ["recipeIds"] });
       return savedRecipe;

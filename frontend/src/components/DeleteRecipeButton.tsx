@@ -1,4 +1,4 @@
-import { RecipeCardData } from "@/lib/state";
+import { Recipe } from "@/services/api";
 import { Dispatch, SetStateAction } from "react";
 import {
   Dialog,
@@ -18,7 +18,7 @@ export function DeleteRecipeButton({
   editedRecipe,
   setOpen,
 }: {
-  editedRecipe: RecipeCardData;
+  editedRecipe: Recipe;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) {
   const { mutate: removeRecipe } = useRemoveRecipe();

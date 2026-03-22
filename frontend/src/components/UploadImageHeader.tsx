@@ -1,4 +1,4 @@
-import { RecipeCardData } from "@/lib/state";
+import { Recipe } from "@/services/api";
 import { Dispatch, SetStateAction, useRef, useState } from "react";
 import { DialogHeader, DialogTitle } from "./ui/dialog";
 import { VisuallyHidden } from "radix-ui";
@@ -8,8 +8,8 @@ export function UploadImageHeader({
   editedRecipe,
   setEditedRecipe,
 }: {
-  editedRecipe: RecipeCardData;
-  setEditedRecipe: Dispatch<SetStateAction<RecipeCardData | null>>;
+  editedRecipe: Recipe;
+  setEditedRecipe: Dispatch<SetStateAction<Recipe | null>>;
 }) {
   // Observes whether the image is hovered over. Needed so  we know whether to
   // show the upload overlay.

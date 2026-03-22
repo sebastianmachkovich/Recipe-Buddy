@@ -33,8 +33,7 @@ import {
 } from "@tanstack/react-router";
 
 import "../index.css";
-import { qc } from "@/lib/state";
-import { authAPI } from "@/services/api";
+import { authAPI, qc } from "@/services/api";
 
 const sidebarItems = [
   {

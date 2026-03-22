@@ -3,7 +3,7 @@ import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 
 // Creates a text input or textarea field with an error message that can be
-// displated if validation fails.
+// displayed if validation fails.
 export default function ErrableTextInputField({
   kind,
   id,

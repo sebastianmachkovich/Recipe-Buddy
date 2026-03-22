@@ -1,15 +1,15 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { RecipeCardData } from "./state";
+import { Recipe } from "@/services/api";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 export function deepCopyRecipe(
-  recipe: RecipeCardData | undefined,
+  recipe: Recipe | undefined,
   newId: number,
-): RecipeCardData {
+): Recipe {
   if (recipe) {
     return {
       ...recipe,

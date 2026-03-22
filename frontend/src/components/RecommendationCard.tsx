@@ -1,4 +1,4 @@
-import { IngredientUnit } from "@/lib/state";
+import { IngredientUnit } from "@/services/api";
 import { Card, CardDescription, CardTitle } from "./ui/card";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
 import { RecipeCardFooter } from "@/components/RecipeCard";

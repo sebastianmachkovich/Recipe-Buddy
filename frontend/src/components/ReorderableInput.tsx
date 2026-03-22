@@ -1,4 +1,9 @@
-import { Ingredient, IngredientUnit, RecipeCardData, Step } from "@/lib/state";
+import {
+  IngredientUnit,
+  RecipeIngredient,
+  Recipe,
+  RecipeStep,
+} from "@/services/api";
 import {
   Select,
   SelectContent,
@@ -79,9 +84,9 @@ function IngredientEditInput({
   onDelete,
   onChange,
 }: {
-  item: Ingredient;
+  item: RecipeIngredient;
   onDelete: () => void;
-  onChange: (updated: Ingredient) => void;
+  onChange: (updated: RecipeIngredient) => void;
 }) {
   return (
     <ReorderableInput payload={item} onDelete={onDelete}>
@@ -101,9 +106,7 @@ function IngredientEditInput({
       <div className="h-5 w-px bg-border" />
       <Select
         value={item.unit ?? IngredientUnit.unit}
-        onValueChange={(value) =>
-          onChange({ ...item, unit: value as IngredientUnit })
-        }
+        onValueChange={(value) => onChange({ ...item, unit: value })}
       >
         <SelectTrigger className="h-full w-20 rounded-none border-0 bg-transparent dark:bg-transparent px-3 text-sm outline-none focus:ring-0 shadow-none ">
           <SelectValue />
@@ -133,9 +136,9 @@ function StepEditInput({
   onDelete,
   onChange,
 }: {
-  item: Step;
+  item: RecipeStep;
   onDelete: () => void;
-  onChange: (updated: Step) => void;
+  onChange: (updated: RecipeStep) => void;
 }) {
   return (
     <ReorderableInput payload={item} onDelete={onDelete}>
@@ -163,12 +166,12 @@ export function ReorderableInputField({
   arrKey,
 }: {
   label: string;
-  editedRecipe: RecipeCardData;
-  setEditedRecipe: Dispatch<SetStateAction<RecipeCardData | null>>;
+  editedRecipe: Recipe;
+  setEditedRecipe: Dispatch<SetStateAction<Recipe | null>>;
   arrKey: "ingredients" | "steps";
 }) {
   // Aliases that resolve the type of the input component based on the array key.
-  type Which = typeof arrKey extends "steps" ? Step : Ingredient;
+  type Which = typeof arrKey extends "steps" ? RecipeStep : RecipeIngredient;
   type WhichInput = typeof arrKey extends "steps"
     ? typeof StepEditInput
     : typeof IngredientEditInput;
@@ -211,7 +214,7 @@ export function ReorderableInputField({
   }
 
   // Updates an ingredient or step in their respective list.
-  function handleUpdate(updated: Ingredient | Step) {
+  function handleUpdate(updated: RecipeIngredient | RecipeStep) {
     setEditedRecipe((prev) =>
       prev
         ? {

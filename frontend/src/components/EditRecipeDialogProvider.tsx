@@ -6,7 +6,7 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { type RecipeCardData } from "@/lib/state";
+import { type Recipe } from "@/services/api";
 import { useState } from "react";
 import ErrableTextInputField from "./ErrableTextInputField";
 import UnparsedTextInputFieldList from "./UnparsedTextInputFieldList";
@@ -40,7 +40,7 @@ export default function EditRecipeDialogProvider({
   // A copy of the recipe that gets edited in the dialog.  Overwrites the
   // original recipe when the dialog is closed with the submit button.  It is
   // null when the "Add Recipe" button opens the dialog.
-  const [editedRecipe, setEditedRecipe] = useState<RecipeCardData | null>(null);
+  const [editedRecipe, setEditedRecipe] = useState<Recipe | null>(null);
 
   // Unparsed ingredients and steps.
   const [newIngredients, setNewIngredients] = useState<string[]>([]);
@@ -127,7 +127,7 @@ export default function EditRecipeDialogProvider({
               id="edit-recipe-description"
               description="Description"
               placeholder="Its flavor was good, but it calls for too much lemon."
-              value={editedRecipe.description}
+              value={editedRecipe.description ?? ""}
               onChange={(e) =>
                 setEditedRecipe((prev) =>
                   prev ? { ...prev, description: e.target.value } : prev,

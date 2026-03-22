@@ -1,10 +1,20 @@
 /// <reference types="vite/client" />
 
 import axios from "axios";
+import { QueryClient } from "@tanstack/react-query";
 
 const browserHost =
   typeof window !== "undefined" ? window.location.hostname : "localhost";
 const API_URL = import.meta.env.VITE_API_URL || `http://${browserHost}:8000`;
+
+export const qc = new QueryClient({
+    defaultOptions: {
+        queries: {
+            staleTime: Infinity,
+            gcTime: Infinity,
+        },
+    },
+});
 
 const api = axios.create({
   baseURL: API_URL,
@@ -20,6 +30,22 @@ export interface Ingredient {
   category: string | null;
   created_at: string;
 }
+
+export enum IngredientUnit {
+    unit = "unit",
+    L = "L",
+    mL = "mL",
+    g = "g",
+    kg = "kg",
+    oz = "oz",
+    tsp = "tsp",
+    Tbsp = "Tbsp",
+    fl_oz = "fl oz",
+    cup = "cup",
+    pt = "pt",
+    qt = "qt",
+    gal = "gal",
+};
 
 export interface Recipe {
   id: number;
