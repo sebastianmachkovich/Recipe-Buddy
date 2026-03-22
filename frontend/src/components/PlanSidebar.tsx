@@ -51,7 +51,7 @@ function EditRecipeSidebarMenuButton({ recipeId }: { recipeId: number }) {
     <SidebarMenuItem key={recipeId}>
       <EditRecipeDialogProvider recipeId={recipeId}>
         <SidebarMenuButton>
-          {recipe!.name}
+          {recipe?.name}
           <Button
             asChild
             variant="ghost"
