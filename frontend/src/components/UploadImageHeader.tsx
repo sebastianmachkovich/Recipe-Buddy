@@ -1,4 +1,5 @@
 import { Recipe } from "@/services/api";
+import { recipesAPI } from "@/services/api";
 import { Dispatch, SetStateAction, useRef, useState } from "react";
 import { DialogHeader, DialogTitle } from "./ui/dialog";
 import { VisuallyHidden } from "radix-ui";
@@ -6,10 +7,14 @@ import { UploadIcon } from "lucide-react";
 
 export function UploadImageHeader({
   editedRecipe,
-  setEditedRecipe,
+  imagePreviewUrl,
+  setImagePreviewUrl,
+  setImageFile,
 }: {
   editedRecipe: Recipe;
-  setEditedRecipe: Dispatch<SetStateAction<Recipe | null>>;
+  imagePreviewUrl: string | null;
+  setImagePreviewUrl: Dispatch<SetStateAction<string | null>>;
+  setImageFile: Dispatch<SetStateAction<File | null>>;
 }) {
   // Observes whether the image is hovered over. Needed so  we know whether to
   // show the upload overlay.
@@ -19,8 +24,7 @@ export function UploadImageHeader({
   // upload overlay.
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Retrieves the image from the file system, gives it a URL, and sets it
-  // as the image URL.
+  // Retrieves the image from the file system and stores it for upload on submit.
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -29,8 +33,15 @@ export function UploadImageHeader({
     if (!validTypes.includes(file.type)) return;
 
     const blobUrl = URL.createObjectURL(file);
-    setEditedRecipe((prev) => (prev ? { ...prev, imgUrl: blobUrl } : prev));
+    setImageFile(file);
+    setImagePreviewUrl(blobUrl);
   }
+
+  const displayImageUrl =
+    imagePreviewUrl ||
+    (editedRecipe.hasImage
+      ? recipesAPI.getImageUrl(editedRecipe.id)
+      : editedRecipe.imgUrl);
 
   return (
     <>
@@ -45,7 +56,7 @@ export function UploadImageHeader({
         <VisuallyHidden.Root asChild>
           <DialogTitle>Edit Recipe</DialogTitle>
         </VisuallyHidden.Root>
-        {editedRecipe.imgUrl ? (
+        {displayImageUrl ? (
           <div
             className="group relative aspect-4/3 w-[calc(100%+3rem)] max-w-none
                        -mx-6 -mt-6 mb-4 rounded-t-lg
@@ -54,7 +65,7 @@ export function UploadImageHeader({
                        cursor-pointer overflow-hidden
                        bg-cover bg-center"
             style={{
-              backgroundImage: `url(${editedRecipe.imgUrl})`,
+              backgroundImage: `url(${displayImageUrl})`,
             }}
             onMouseEnter={() => setIsImageHovered(true)}
             onMouseLeave={() => setIsImageHovered(false)}

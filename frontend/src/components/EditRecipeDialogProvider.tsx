@@ -20,6 +20,7 @@ import {
   useRecipe,
   useRecipeIds,
 } from "@/hooks/queries";
+import { qc, recipesAPI } from "@/services/api";
 
 export default function EditRecipeDialogProvider({
   children,
@@ -30,8 +31,8 @@ export default function EditRecipeDialogProvider({
 }) {
   const { data: recipe } = useRecipe(recipeId);
   const { data: recipeIds } = useRecipeIds();
-  const { mutate: addRecipe } = useAddRecipe();
-  const { mutate: updateRecipe } = useUpdateRecipe();
+  const { mutateAsync: addRecipe } = useAddRecipe();
+  const { mutateAsync: updateRecipe } = useUpdateRecipe();
 
   // Observes whether the dialog is open.  Needed because we use a <DialogTrigger>
   // to open the it, rather than a prop.
@@ -50,6 +51,10 @@ export default function EditRecipeDialogProvider({
   const [nameError, setNameError] = useState(false);
   const [descriptionError, setDescriptionError] = useState(false);
 
+  // Image selected in the dialog to upload to the backend on submit.
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+
   // Opens the dialog if the trigger is clicked.
   function handleOpenChange(newOpen: boolean) {
     if (newOpen) {
@@ -61,11 +66,13 @@ export default function EditRecipeDialogProvider({
       setDescriptionError(false);
       setNewIngredients([]);
       setNewSteps([]);
+      setImageFile(null);
+      setImagePreviewUrl(null);
     }
     setOpen(newOpen);
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!editedRecipe) return;
 
     // Does basic input validation.
@@ -88,10 +95,17 @@ export default function EditRecipeDialogProvider({
 
     // Updates the recipe in the list if it exists, or creates a new one and
     // appends it to the list.
-    if (recipe) {
-      updateRecipe(editedRecipe);
-    } else {
-      addRecipe(editedRecipe);
+    const savedRecipe = recipe
+      ? await updateRecipe(editedRecipe)
+      : await addRecipe(editedRecipe);
+
+    if (imageFile) {
+      await recipesAPI.uploadImage(savedRecipe.id, imageFile);
+      qc.setQueryData(
+        ["recipes", savedRecipe.id],
+        (prev: Recipe | undefined) =>
+          prev ? { ...prev, hasImage: true } : prev,
+      );
     }
 
     // Manually closes the dialog.
@@ -105,7 +119,9 @@ export default function EditRecipeDialogProvider({
         <DialogContent className="max-h-[calc(100vh-2rem)] grid-rows-[auto_1fr_auto]">
           <UploadImageHeader
             editedRecipe={editedRecipe}
-            setEditedRecipe={setEditedRecipe}
+            imagePreviewUrl={imagePreviewUrl}
+            setImagePreviewUrl={setImagePreviewUrl}
+            setImageFile={setImageFile}
           />
           <div className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden min-h-0 px-3">
             <ErrableTextInputField

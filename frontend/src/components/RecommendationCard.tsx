@@ -1,4 +1,5 @@
 import { IngredientUnit } from "@/services/api";
+import { recipesAPI } from "@/services/api";
 import { Card, CardDescription, CardTitle } from "./ui/card";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
 import { RecipeCardFooter } from "@/components/RecipeCard";
@@ -15,13 +16,17 @@ export default function RecommendationCard({
 }) {
   const { data: recipe, isLoading } = useRecipe(recipeId);
   if (isLoading || !recipe) return <RecommendationCardSkeleton />;
+  const imageSrc = recipe.hasImage
+    ? recipesAPI.getImageUrl(recipe.id)
+    : recipe.imgUrl || BowlWhisk;
+
   return (
     <EditRecipeDialogProvider recipeId={recipeId}>
       <Card
         className={`flex ${orientation ? "flex-row-reverse" : "flex-row"} w-2/3 p-0 overflow-hidden cursor-pointer`}
       >
         <img
-          src={recipe.imgUrl || BowlWhisk}
+          src={imageSrc}
           alt={recipe.name}
           className={`w-2/5 object-cover shrink-0 
                 ${orientation ? "rounded-r-lg" : "rounded-l-lg"}`}

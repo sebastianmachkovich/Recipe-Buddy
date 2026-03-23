@@ -8,12 +8,12 @@ const browserHost =
 const API_URL = import.meta.env.VITE_API_URL || `http://${browserHost}:8000`;
 
 export const qc = new QueryClient({
-    defaultOptions: {
-        queries: {
-            staleTime: Infinity,
-            gcTime: Infinity,
-        },
+  defaultOptions: {
+    queries: {
+      staleTime: Infinity,
+      gcTime: Infinity,
     },
+  },
 });
 
 const api = axios.create({
@@ -32,26 +32,27 @@ export interface Ingredient {
 }
 
 export enum IngredientUnit {
-    unit = "unit",
-    L = "L",
-    mL = "mL",
-    g = "g",
-    kg = "kg",
-    oz = "oz",
-    tsp = "tsp",
-    Tbsp = "Tbsp",
-    fl_oz = "fl oz",
-    cup = "cup",
-    pt = "pt",
-    qt = "qt",
-    gal = "gal",
-};
+  unit = "unit",
+  L = "L",
+  mL = "mL",
+  g = "g",
+  kg = "kg",
+  oz = "oz",
+  tsp = "tsp",
+  Tbsp = "Tbsp",
+  fl_oz = "fl oz",
+  cup = "cup",
+  pt = "pt",
+  qt = "qt",
+  gal = "gal",
+}
 
 export interface Recipe {
   id: number;
   name: string;
   description: string | null;
   imgUrl: string | null;
+  hasImage?: boolean;
   rating: number | null;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
@@ -148,6 +149,23 @@ export const recipesAPI = {
   getAll: () => api.get<Recipe[]>("/recipes/"),
 
   getById: (id: number) => api.get<Recipe>(`/recipes/${id}`),
+
+  getImageUrl: (id: number) => `${API_URL}/recipes/${id}/image`,
+
+  uploadImage: (id: number, file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    return api.post<{
+      recipe_id: number;
+      filename: string | null;
+      mime: string | null;
+      size_bytes: number | null;
+    }>(`/recipes/${id}/image`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
 
   create: (data: RecipeWritePayload) => api.post<Recipe>("/recipes/", data),
 

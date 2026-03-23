@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import EditRecipeDialogProvider from "@/components/EditRecipeDialogProvider";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
+import { recipesAPI } from "@/services/api";
 import {
   useAddToPlan,
   useRemoveFromPlan,
@@ -35,7 +36,6 @@ export function AddRecipeCard() {
 
 export function RecipeCard({ recipeId }: { recipeId: number }) {
   const { data: recipe, isLoading, error } = useRecipe(recipeId);
-  console.log({ recipeId, recipe, isLoading, error });
   if (isLoading || !recipe) {
     return (
       <Card className="h-full flex flex-col items-center justify-center">
@@ -51,13 +51,15 @@ export function RecipeCard({ recipeId }: { recipeId: number }) {
       </Card>
     );
   }
-  console.log("Rendering RecipeCard with recipe:", recipe);
-  console.log(recipe.imgUrl);
+  const imageSrc = recipe.hasImage
+    ? recipesAPI.getImageUrl(recipe.id)
+    : recipe.imgUrl || BowlWhisk;
+
   return (
     <EditRecipeDialogProvider recipeId={recipeId}>
       <Card className="group h-full flex flex-col pt-0 overflow-hidden select-none hover:bg-accent hover:text-accent-foreground dark:bg-card dark:border-input dark:hover:bg-input cursor-pointer">
         <img
-          src={recipe.imgUrl || BowlWhisk}
+          src={imageSrc}
           alt={recipe.name}
           className="aspect-4/3 w-full object-cover rounded-t-lg"
         />
