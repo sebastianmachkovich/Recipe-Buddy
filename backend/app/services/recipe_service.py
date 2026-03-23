@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from fastapi import HTTPException
 from sqlalchemy import func, or_
@@ -12,12 +12,13 @@ ALLOWED_RECIPE_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
 def serialize_recipe(recipe: Recipe) -> dict[str, Any]:
+    image_data = cast(bytes | None, recipe.image_data)
     return {
         "id": recipe.id,
         "name": recipe.name,
         "description": recipe.description,
         "imgUrl": recipe.imgUrl,
-        "hasImage": recipe.image_data is not None,
+        "hasImage": image_data is not None,
         "rating": recipe.rating,
         "ingredients": recipe.ingredients or [],
         "steps": recipe.steps or [],
@@ -169,17 +170,21 @@ def upload_recipe_image_for_user(
         raise HTTPException(status_code=413, detail="Image too large. Max size is 5 MB.")
 
     recipe = _assert_recipe_ownership(db, user, recipe_id)
-    recipe.image_data = image_bytes
-    recipe.image_mime = content_type
-    recipe.image_filename = filename
-    recipe.image_size_bytes = len(image_bytes)
+    setattr(recipe, "image_data", image_bytes)
+    setattr(recipe, "image_mime", content_type)
+    setattr(recipe, "image_filename", filename)
+    setattr(recipe, "image_size_bytes", len(image_bytes))
     db.commit()
+
+    stored_filename = cast(str | None, recipe.image_filename)
+    stored_mime = cast(str | None, recipe.image_mime)
+    stored_size_bytes = cast(int | None, recipe.image_size_bytes)
 
     return {
         "recipe_id": recipe.id,
-        "filename": recipe.image_filename,
-        "mime": recipe.image_mime,
-        "size_bytes": recipe.image_size_bytes,
+        "filename": stored_filename,
+        "mime": stored_mime,
+        "size_bytes": stored_size_bytes,
     }
 
 
@@ -188,21 +193,26 @@ def get_recipe_image_for_user(db: Session, user: User, recipe_id: int) -> tuple[
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
-    if not recipe.image_data or not recipe.image_mime:
+    image_data = cast(bytes | None, recipe.image_data)
+    image_mime = cast(str | None, recipe.image_mime)
+    image_filename = cast(str | None, recipe.image_filename)
+
+    if image_data is None or image_mime is None:
         raise HTTPException(status_code=404, detail="Recipe image not found")
 
-    return recipe.image_data, recipe.image_mime, recipe.image_filename
+    return image_data, image_mime, image_filename
 
 
 def delete_recipe_image_for_user(db: Session, user: User, recipe_id: int) -> dict[str, bool]:
     recipe = _assert_recipe_ownership(db, user, recipe_id)
-    if not recipe.image_data:
+    image_data = cast(bytes | None, recipe.image_data)
+    if image_data is None:
         raise HTTPException(status_code=404, detail="Recipe image not found")
 
-    recipe.image_data = None
-    recipe.image_mime = None
-    recipe.image_filename = None
-    recipe.image_size_bytes = None
+    setattr(recipe, "image_data", None)
+    setattr(recipe, "image_mime", None)
+    setattr(recipe, "image_filename", None)
+    setattr(recipe, "image_size_bytes", None)
     db.commit()
 
     return {"deleted": True}
