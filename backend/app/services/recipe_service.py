@@ -7,6 +7,9 @@ from sqlalchemy.orm import Session
 from app.models import Recipe, User, UserRecipeOwnership
 from app.schemas.recipe import RecipeWritePayload
 
+MAX_RECIPE_IMAGE_BYTES = 5 * 1024 * 1024
+ALLOWED_RECIPE_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
 
 def serialize_recipe(recipe: Recipe) -> dict[str, Any]:
     return {
@@ -14,6 +17,7 @@ def serialize_recipe(recipe: Recipe) -> dict[str, Any]:
         "name": recipe.name,
         "description": recipe.description,
         "imgUrl": recipe.imgUrl,
+        "hasImage": recipe.image_data is not None,
         "rating": recipe.rating,
         "ingredients": recipe.ingredients or [],
         "steps": recipe.steps or [],
@@ -126,4 +130,79 @@ def delete_recipe_for_user(db: Session, user: User, recipe_id: int) -> dict[str,
     db.delete(ownership)
     db.delete(recipe)
     db.commit()
+    return {"deleted": True}
+
+
+def _assert_recipe_ownership(db: Session, user: User, recipe_id: int) -> Recipe:
+    ownership = (
+        db.query(UserRecipeOwnership)
+        .filter(UserRecipeOwnership.recipe_id == recipe_id, UserRecipeOwnership.user_id == user.id)
+        .first()
+    )
+    if not ownership:
+        raise HTTPException(status_code=403, detail="You can only edit recipes you own")
+
+    recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return recipe
+
+
+def upload_recipe_image_for_user(
+    db: Session,
+    user: User,
+    recipe_id: int,
+    image_bytes: bytes,
+    content_type: str,
+    filename: str | None,
+) -> dict[str, Any]:
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="Image file is empty")
+
+    if content_type not in ALLOWED_RECIPE_IMAGE_MIME_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported image type. Use JPEG, PNG, or WEBP.",
+        )
+
+    if len(image_bytes) > MAX_RECIPE_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="Image too large. Max size is 5 MB.")
+
+    recipe = _assert_recipe_ownership(db, user, recipe_id)
+    recipe.image_data = image_bytes
+    recipe.image_mime = content_type
+    recipe.image_filename = filename
+    recipe.image_size_bytes = len(image_bytes)
+    db.commit()
+
+    return {
+        "recipe_id": recipe.id,
+        "filename": recipe.image_filename,
+        "mime": recipe.image_mime,
+        "size_bytes": recipe.image_size_bytes,
+    }
+
+
+def get_recipe_image_for_user(db: Session, user: User, recipe_id: int) -> tuple[bytes, str, str | None]:
+    recipe = get_accessible_recipe(db, user, recipe_id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    if not recipe.image_data or not recipe.image_mime:
+        raise HTTPException(status_code=404, detail="Recipe image not found")
+
+    return recipe.image_data, recipe.image_mime, recipe.image_filename
+
+
+def delete_recipe_image_for_user(db: Session, user: User, recipe_id: int) -> dict[str, bool]:
+    recipe = _assert_recipe_ownership(db, user, recipe_id)
+    if not recipe.image_data:
+        raise HTTPException(status_code=404, detail="Recipe image not found")
+
+    recipe.image_data = None
+    recipe.image_mime = None
+    recipe.image_filename = None
+    recipe.image_size_bytes = None
+    db.commit()
+
     return {"deleted": True}

@@ -1,5 +1,5 @@
 # app/models.py
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, LargeBinary, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from .database import Base
 from sqlalchemy.sql import func
@@ -11,6 +11,10 @@ class Recipe(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     imgUrl = Column(String(255), nullable=True)
+    image_data = Column(LargeBinary, nullable=True)
+    image_mime = Column(String(100), nullable=True)
+    image_filename = Column(String(255), nullable=True)
+    image_size_bytes = Column(Integer, nullable=True)
     rating = Column(Integer, nullable=True)
     ingredients = Column(JSONB, nullable=True)
     steps = Column(JSONB, nullable=True) 
