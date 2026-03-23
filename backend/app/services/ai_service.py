@@ -2,13 +2,18 @@ import base64
 import json
 import os
 import re
+from pathlib import Path
 from typing import Any
 
 import httpx
+from dotenv import load_dotenv
 from fastapi import HTTPException, UploadFile
 from pydantic import ValidationError
 
 from app.schemas.ai import AIRecipe, AIRecipeRequest, AIRecipeResponse
+
+ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(dotenv_path=ENV_PATH)
 
 
 def normalize_ingredients(raw_ingredients: list[str] | str) -> list[str]:
