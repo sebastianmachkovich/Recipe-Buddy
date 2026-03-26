@@ -33,7 +33,8 @@ import {
 } from "@tanstack/react-router";
 
 import "../index.css";
-import { authAPI, qc } from "@/services/api";
+import { qc } from "@/services/api";
+import { useLogout } from "@/hooks/queries";
 
 const sidebarItems = [
   {
@@ -73,23 +74,9 @@ function RootLayout() {
     select: (state) => state.location.pathname,
   });
   const isAuthPage = pathname === "/";
-  const navigate = useNavigate();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-
-  async function handleLogout() {
-    setIsLoggingOut(true);
-    try {
-      await authAPI.logout();
-    } finally {
-      qc.removeQueries({ queryKey: ["currentUser"] });
-      qc.removeQueries({ queryKey: ["planIds"] });
-      qc.removeQueries({ queryKey: ["recipeIds"] });
-      qc.removeQueries({ queryKey: ["feedIds"] });
-      setIsLoggingOut(false);
-      await navigate({ to: "/" });
-    }
-  }
+  const navigate = useNavigate();
+  const { mutate: logout, isPending: isLoggingOut } = useLogout(navigate);
 
   return (
     <QueryClientProvider client={qc}>
@@ -158,7 +145,7 @@ function RootLayout() {
                             <AlertDialogAction
                               variant="destructive"
                               disabled={isLoggingOut}
-                              onClick={handleLogout}
+                              onClick={() => logout()}
                             >
                               {isLoggingOut ? "Logging out..." : "Log out"}
                             </AlertDialogAction>

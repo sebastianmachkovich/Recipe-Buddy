@@ -6,6 +6,7 @@ import {
   recipesAPI,
   type Recipe,
 } from "@/services/api";
+import { UseNavigateResult } from "@tanstack/react-router";
 
 export function useCurrentUser() {
   return useQuery({
@@ -54,16 +55,19 @@ export function useSignup() {
   }, qc);
 }
 
-export function useLogout() {
+export function useLogout(navigate: UseNavigateResult<string>) {
   return useMutation({
     mutationFn: () => authAPI.logout(),
+    async onMutate() {
+      await navigate({ to: "/" });
+    },
     onSuccess(data, variables, onMutateResult, context) {
       context.client.removeQueries({ queryKey: ["currentUser"] });
       context.client.removeQueries({ queryKey: ["planIds"] });
       context.client.removeQueries({ queryKey: ["recipeIds"] });
       context.client.removeQueries({ queryKey: ["feedIds"] });
     },
-    onError(error, variables, onMutateResult, context) {
+    async onError(error, variables, onMutateResult, context) {
         // TODO: Notify user.
     },
   }, qc);
