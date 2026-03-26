@@ -16,11 +16,11 @@ import { DeleteRecipeButton } from "./DeleteRecipeButton";
 import { UploadImageHeader } from "./UploadImageHeader";
 import {
   useAddRecipe,
-  useUpdateRecipe,
   useRecipe,
   useRecipeIds,
+  useUpdateRecipe,
+  useUploadImage,
 } from "@/hooks/queries";
-import { qc, recipesAPI } from "@/services/api";
 
 export default function EditRecipeDialogProvider({
   children,
@@ -33,6 +33,7 @@ export default function EditRecipeDialogProvider({
   const { data: recipeIds } = useRecipeIds();
   const { mutateAsync: addRecipe } = useAddRecipe();
   const { mutateAsync: updateRecipe } = useUpdateRecipe();
+  const { mutateAsync: uploadImage } = useUploadImage();
 
   // Observes whether the dialog is open.  Needed because we use a <DialogTrigger>
   // to open the it, rather than a prop.
@@ -99,13 +100,10 @@ export default function EditRecipeDialogProvider({
       ? await updateRecipe(editedRecipe)
       : await addRecipe(editedRecipe);
 
+    // FIXME: This should not be a separate request!  It should be part of
+    //        `updateRecipe` and `addRecipe`.
     if (imageFile) {
-      await recipesAPI.uploadImage(savedRecipe.id, imageFile);
-      qc.setQueryData(
-        ["recipes", savedRecipe.id],
-        (prev: Recipe | undefined) =>
-          prev ? { ...prev, hasImage: true } : prev,
-      );
+      await uploadImage({ recipeId: recipeId!, file: imageFile });
     }
 
     // Manually closes the dialog.

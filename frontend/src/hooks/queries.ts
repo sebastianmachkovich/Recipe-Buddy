@@ -256,3 +256,26 @@ export function useRemoveFromPlan() {
     },
   }, qc);
 }
+
+export function useUploadImage() {
+  return useMutation({
+    mutationFn: ({ recipeId, file }: { recipeId: number; file: File }) => {
+      return recipesAPI.uploadImage(recipeId, file);
+    },
+    async onMutate(variables, context) {
+      await context.client.cancelQueries({ queryKey: ["recipes", variables.recipeId] });
+      const prevRecipe = context.client.getQueryData<number>(["recipes", variables.recipeId]);
+      context.client.setQueryData(["recipes", variables.recipeId], (prev: Recipe | undefined) =>
+        prev ? { ...prev, hasImage: true } : prev,
+      );
+      return { prevRecipe };
+    },
+    onError(error, variables, onMutateResult, context) {
+      context.client.setQueryData(["recipes", variables.recipeId], onMutateResult?.prevRecipe);
+      // TODO: Notify user.
+    },
+    async onSettled(data, error, variables, onMutateResult, context) {
+      await context.client.invalidateQueries({ queryKey: ["recipes", variables.recipeId] });
+    },
+  }, qc);
+}
