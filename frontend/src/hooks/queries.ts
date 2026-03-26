@@ -15,7 +15,7 @@ export function useCurrentUser() {
       return response.data.user;
     },
     retry: false,
-  });
+  }, qc);
 }
 
 export function useLogin() {
@@ -30,7 +30,10 @@ export function useLogin() {
       await qc.invalidateQueries({ queryKey: ["recipeIds"] });
       await qc.invalidateQueries({ queryKey: ["feedIds"] });
     },
-  });
+    onError(error, payload, onMutateResult, context) {
+      // TODO: Notify user.
+    },
+  }, qc);
 }
 
 export function useSignup() {
@@ -45,21 +48,25 @@ export function useSignup() {
       await qc.invalidateQueries({ queryKey: ["recipeIds"] });
       await qc.invalidateQueries({ queryKey: ["feedIds"] });
     },
-  });
+    onError(error, payload, onMutateResult, context) {
+      // TODO: Notify user.
+    },
+  }, qc);
 }
 
 export function useLogout() {
   return useMutation({
-    mutationFn: async () => {
-      await authAPI.logout();
+    mutationFn: () => authAPI.logout(),
+    onSuccess(data, variables, onMutateResult, context) {
+      context.client.removeQueries({ queryKey: ["currentUser"] });
+      context.client.removeQueries({ queryKey: ["planIds"] });
+      context.client.removeQueries({ queryKey: ["recipeIds"] });
+      context.client.removeQueries({ queryKey: ["feedIds"] });
     },
-    onSuccess: () => {
-      qc.removeQueries({ queryKey: ["currentUser"] });
-      qc.removeQueries({ queryKey: ["planIds"] });
-      qc.removeQueries({ queryKey: ["recipeIds"] });
-      qc.removeQueries({ queryKey: ["feedIds"] });
+    onError(error, variables, onMutateResult, context) {
+        // TODO: Notify user.
     },
-  });
+  }, qc);
 }
 
 export function useRecipe(id?: number) {
@@ -70,7 +77,7 @@ export function useRecipe(id?: number) {
       return response.data;
     },
     enabled: !!id,
-  });
+  }, qc);
 }
 
 export function useAllRecipes() {
@@ -80,49 +87,100 @@ export function useAllRecipes() {
       const response = await recipesAPI.getAll();
       return response.data;
     },
-  });
+  }, qc);
 }
 
 export function useAddRecipe() {
   return useMutation({
-    mutationFn: async (recipe: Recipe) => {
-      const { id, ...rest } = recipe;
-      const response = await recipesAPI.create(rest);
-      const savedRecipe = response.data;
-      qc.setQueryData(["recipes", savedRecipe.id], savedRecipe);
-      await qc.invalidateQueries({ queryKey: ["recipeIds"] });
-      return savedRecipe;
+    mutationFn: ({ id, ...rest }: Recipe) => recipesAPI.create(rest),
+    async onMutate(value, context) {
+      await context.client.cancelQueries({ queryKey: ["recipes", value.id] });
+      await context.client.cancelQueries({ queryKey: ["recipeIds"] });
+      await context.client.cancelQueries({ queryKey: ["planIds"] });
+      const prevRecipe = context.client.getQueryData<number>(["recipes", value.id]);
+      const prevRecipeIds = context.client.getQueryData<number[]>(["recipeIds"]);
+      const prevPlanIds = context.client.getQueryData<number[]>(["planIds"]);
+      context.client.setQueryData(["recipes", value.id], value);
+      context.client.setQueryData<number[]>(["recipeIds"], (ids) => [...(ids || []), value.id]);
+      context.client.setQueryData<number[]>(["planIds"], (ids) => [...(ids || []), value.id]);
+      return { prevRecipe, prevRecipeIds, prevPlanIds };
     },
-  });
+    onError(error, value, onMutateResult, context) {
+      context.client.setQueryData(["recipes", value.id], onMutateResult?.prevRecipe);
+      context.client.setQueryData<number[]>(["recipeIds"], onMutateResult?.prevRecipeIds);
+      context.client.setQueryData<number[]>(["planIds"], onMutateResult?.prevPlanIds);
+    },
+    async onSettled(data, error, value, onMutateResult, context) {
+      await context.client.invalidateQueries({ queryKey: ["recipes", value.id] });
+      await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
+      await context.client.invalidateQueries({ queryKey: ["planIds"] });
+    },
+  }, qc);
 }
 
 export function useRemoveRecipe() {
   return useMutation({
     mutationFn: async (id: number) => {
-      await recipesAPI.delete(id);
-      qc.removeQueries({ queryKey: ["recipes", id] });
-      qc.setQueryData(["planIds"], (ids: number[] | undefined) =>
+        await recipesAPI.delete(id);
+        return id;
+    },
+    async onMutate(id, context) {
+      context.client.cancelQueries({ queryKey: ["recipes", id] });
+      context.client.cancelQueries({ queryKey: ["recipeIds"] });
+      context.client.cancelQueries({ queryKey: ["planIds"] });
+      const prevRecipe = context.client.getQueryData<number>(["recipes", id]);
+      const prevRecipeIds = context.client.getQueryData<number[]>(["recipeIds"]);
+      const prevPlanIds = context.client.getQueryData<number[]>(["planIds"]);
+      context.client.setQueryData(["recipes", id], undefined);
+      context.client.setQueryData<number[]>(["recipeIds"], (ids: number[] | undefined) =>
           ids?.filter((it) => it !== id)
       );
-      await qc.invalidateQueries({ queryKey: ["recipeIds"] });
+      context.client.setQueryData<number[]>(["planIds"], (ids: number[] | undefined) =>
+          ids?.filter((it) => it !== id)
+      );
+      return { prevRecipe, prevRecipeIds, prevPlanIds };
     },
-  });
+    onError(error, id, onMutateResult, context) {
+      context.client.setQueryData(["recipes", id], onMutateResult?.prevRecipe);
+      context.client.setQueryData<number[]>(["recipeIds"], onMutateResult?.prevRecipeIds);
+      context.client.setQueryData<number[]>(["planIds"], onMutateResult?.prevPlanIds);
+      // TODO: Notify user.
+    },
+    async onSettled(data, error, id, onMutateResult, context) {
+      await context.client.invalidateQueries({ queryKey: ["recipes", id] });
+      await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
+      await context.client.invalidateQueries({ queryKey: ["planIds"] });
+    },
+  }, qc);
 }
 
 export function useUpdateRecipe() {
   return useMutation({
-    mutationFn: async (recipe: Recipe) => {
-      const { id, ...rest } = recipe;
-      const response = await recipesAPI.update(
-        id,
-        rest,
-      );
-      const savedRecipe = response.data;
-      qc.setQueryData(["recipes", savedRecipe.id], savedRecipe);
-      await qc.invalidateQueries({ queryKey: ["recipeIds"] });
-      return savedRecipe;
+    mutationFn: ({ id, ...rest }: Recipe) => recipesAPI.update(id, rest),
+    async onMutate(value, context) {
+      await context.client.cancelQueries({ queryKey: ["recipes", value.id] });
+      await context.client.cancelQueries({ queryKey: ["recipeIds"] });
+      await context.client.cancelQueries({ queryKey: ["planIds"] });
+      const prevRecipe = context.client.getQueryData<number>(["recipes", value.id]);
+      const prevRecipeIds = context.client.getQueryData<number[]>(["recipeIds"]);
+      const prevPlanIds = context.client.getQueryData<number[]>(["planIds"]);
+      context.client.setQueryData(["recipes", value.id], value);
+      context.client.setQueryData<number[]>(["recipeIds"], (ids) => [...(ids || []), value.id]);
+      context.client.setQueryData<number[]>(["planIds"], (ids) => [...(ids || []), value.id]);
+      return { prevRecipe, prevRecipeIds, prevPlanIds };
     },
-  });
+    onError(error, value, onMutateResult, context) {
+      context.client.setQueryData(["recipes", value.id], onMutateResult?.prevRecipe);
+      context.client.setQueryData<number[]>(["recipeIds"], onMutateResult?.prevRecipeIds);
+      context.client.setQueryData<number[]>(["planIds"], onMutateResult?.prevPlanIds);
+      // TODO: Notify user.
+    },
+    async onSettled(data, error, value, onMutateResult, context) {
+      await context.client.invalidateQueries({ queryKey: ["recipes", value.id] });
+      await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
+      await context.client.invalidateQueries({ queryKey: ["planIds"] });
+    },
+  }, qc);
 }
 
 export function useRecipeIds() {
@@ -132,7 +190,7 @@ export function useRecipeIds() {
       const response = await recipesAPI.getAll();
       return response.data.map((recipe) => recipe.id);
     },
-  });
+  }, qc);
 }
 
 export function usePlanIds() {
@@ -142,23 +200,55 @@ export function usePlanIds() {
       const response = await planAPI.getAll();
       return response.data;
     },
-  });
+  }, qc);
 }
 
 export function useAddToPlan() {
   return useMutation({
-    mutationFn: async (id: number) => {
-      await planAPI.add(id);
-      await qc.invalidateQueries({ queryKey: ["planIds"] });
+    mutationFn: (id: number) => planAPI.add(id),
+    async onMutate(value, context) {
+      await context.client.cancelQueries({ queryKey: ["planIds"] });
+      const prev = context.client.getQueryData<number[]>(["planIds"]);
+      context.client.setQueryData<number[]>(
+        ["planIds"],
+        (ids) => [...(ids || []), value]
+      );
+      return { prev };
     },
-  });
+    onError(error, value, onMutateResult, context) {
+      context.client.setQueryData<number[]>(
+        ["planIds"],
+        onMutateResult?.prev
+      );
+      // TODO: Notify user.
+    },
+    async onSettled(data, error, variables, onMutateResult, context) {
+      await context.client.invalidateQueries({ queryKey: ["planIds"] });
+    },
+  }, qc);
 }
 
 export function useRemoveFromPlan() {
   return useMutation({
-    mutationFn: async (id: number) => {
-      await planAPI.remove(id);
-      await qc.invalidateQueries({ queryKey: ["planIds"] });
+    mutationFn: (id: number) => planAPI.remove(id),
+    async onMutate(value, context) {
+      await context.client.cancelQueries({ queryKey: ["planIds"] });
+      const prev = context.client.getQueryData<number[]>(["planIds"]);
+      context.client.setQueryData<number[]>(
+        ["planIds"],
+        (ids) => ids?.filter((it) => it !== value)
+      );
+      return { prev };
     },
-  });
+    onError(error, value, onMutateResult, context) {
+      context.client.setQueryData<number[]>(
+        ["planIds"],
+        onMutateResult?.prev
+      );
+      // TODO: Notify user.
+    },
+    async onSettled(data, error, variables, onMutateResult, context) {
+      await context.client.invalidateQueries({ queryKey: ["planIds"] });
+    },
+  }, qc);
 }
