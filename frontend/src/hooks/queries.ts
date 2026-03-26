@@ -25,11 +25,11 @@ export function useLogin() {
       const response = await authAPI.login(payload);
       return response.data;
     },
-    onSuccess: async (user) => {
-      qc.setQueryData(["currentUser"], user);
-      await qc.invalidateQueries({ queryKey: ["planIds"] });
-      await qc.invalidateQueries({ queryKey: ["recipeIds"] });
-      await qc.invalidateQueries({ queryKey: ["feedIds"] });
+    async onSuccess(user, variables, onMutateResult, context) {
+      context.client.setQueryData(["currentUser"], user);
+      await context.client.invalidateQueries({ queryKey: ["planIds"] });
+      await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
+      await context.client.invalidateQueries({ queryKey: ["feedIds"] });
     },
     onError(error, payload, onMutateResult, context) {
       // TODO: Notify user.
@@ -43,11 +43,11 @@ export function useSignup() {
       const response = await authAPI.signup(payload);
       return response.data;
     },
-    onSuccess: async (user) => {
-      qc.setQueryData(["currentUser"], user);
-      await qc.invalidateQueries({ queryKey: ["planIds"] });
-      await qc.invalidateQueries({ queryKey: ["recipeIds"] });
-      await qc.invalidateQueries({ queryKey: ["feedIds"] });
+    async onSuccess(user, variables, onMutateResult, context) {
+      context.client.setQueryData(["currentUser"], user);
+      await context.client.invalidateQueries({ queryKey: ["planIds"] });
+      await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
+      await context.client.invalidateQueries({ queryKey: ["feedIds"] });
     },
     onError(error, payload, onMutateResult, context) {
       // TODO: Notify user.
