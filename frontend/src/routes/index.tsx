@@ -43,7 +43,7 @@ function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-6">
+    <div className="min-h-screen w-full flex items-center justify-center">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>

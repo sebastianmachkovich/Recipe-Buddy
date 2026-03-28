@@ -8,39 +8,54 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarProvider,
 } from "@/components/ui/sidebar";
 import { Button } from "./ui/button";
 import { X } from "lucide-react";
 import EditRecipeDialogProvider from "./EditRecipeDialogProvider";
 import { usePlanIds, useRecipe, useRemoveFromPlan } from "@/hooks/queries";
+import { useRouterState } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
 
 export default function PlanSidebar() {
   const { data: recipeIdsInPlan } = usePlanIds();
+  const isAuthPage = useRouterState({
+    select: (state) => state.location.pathname === "/",
+  });
+
   return (
-    <Sidebar
-      collapsible="icon"
-      variant="sidebar"
-      side="right"
-      className="group"
+    <SidebarProvider
+      defaultOpen={true}
+      className={cn(
+        "w-fit overflow-hidden max-h-dvh",
+        isAuthPage ? "hidden" : "",
+      )}
     >
-      <SidebarContent className="flex flex-col gap-2">
-        <SidebarGroup>
-          <SidebarGroupLabel>Plan</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {recipeIdsInPlan?.map((id) => (
-                <EditRecipeSidebarMenuButton key={id} recipeId={id} />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter>
-        <Button variant="default" className="w-full">
-          Let Me Cook!
-        </Button>
-      </SidebarFooter>
-    </Sidebar>
+      <Sidebar
+        collapsible="icon"
+        variant="sidebar"
+        side="right"
+        className="group"
+      >
+        <SidebarContent className="flex flex-col gap-2">
+          <SidebarGroup>
+            <SidebarGroupLabel>Plan</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {recipeIdsInPlan?.map((id) => (
+                  <EditRecipeSidebarMenuButton key={id} recipeId={id} />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter>
+          <Button variant="default" className="w-full">
+            Let Me Cook!
+          </Button>
+        </SidebarFooter>
+      </Sidebar>
+    </SidebarProvider>
   );
 }
 
