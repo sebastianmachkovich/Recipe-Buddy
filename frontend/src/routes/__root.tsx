@@ -8,11 +8,13 @@ import { createRootRoute, Outlet } from "@tanstack/react-router";
 import "../index.css";
 import { qc } from "@/services/api";
 import { AppSidebar } from "@/components/AppSidebar";
+import { Toaster } from "sonner";
 
 function RootLayout() {
   return (
     <QueryClientProvider client={qc}>
       <ThemeProvider defaultTheme="dark">
+        <Toaster position="bottom-right" />
         <TooltipProvider>
           <div className="w-full flex overflow-hidden max-h-dvh">
             <AppSidebar />
