@@ -1,5 +1,4 @@
-import { Check, PlusIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Check, PlusIcon, TriangleAlert } from "lucide-react";
 import {
   Card,
   CardFooter,
@@ -10,7 +9,6 @@ import {
 import { Button } from "@/components/ui/button";
 import EditRecipeDialogProvider from "@/components/EditRecipeDialogProvider";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
-import { recipesAPI } from "@/services/api";
 import {
   useAddToPlan,
   useRemoveFromPlan,
@@ -19,6 +17,7 @@ import {
 } from "@/hooks/queries";
 import { useMemo } from "react";
 import { StarRating } from "./StarRating";
+import { Skeleton } from "./ui/skeleton";
 
 export function AddRecipeCard() {
   return (
@@ -28,28 +27,50 @@ export function AddRecipeCard() {
           <PlusIcon className="h-12 w-12" />
           <span className="text-sm font-medium select-none">Add Recipe</span>
         </div>
-        <CardHeader className="shrink-0"></CardHeader>
       </Card>
     </EditRecipeDialogProvider>
+  );
+}
+
+function RecipeCardSkeleton() {
+  return (
+    <Card className="group h-full flex flex-col pt-0 overflow-hidden select-none dark:bg-card dark:border-input">
+      <Skeleton className="aspect-4/3 w-full object-cover rounded-t-lg" />
+      <CardHeader className="shrink-0 px-6 pt-6">
+        <CardTitle className="font-bold select-none">
+          <Skeleton className="w-1/2 h-4" />
+        </CardTitle>
+        <div className="relative h-16 overflow-hidden mask-[linear-gradient(to_bottom,black_70%,transparent_100%)]">
+          <CardDescription className="absolute inset-0 select-none flex flex-col gap-2">
+            <Skeleton className="w-3/4 h-4" />
+            <Skeleton className="w-3/4 h-4" />
+            <Skeleton className="w-1/2 h-4" />
+          </CardDescription>
+        </div>
+      </CardHeader>
+      <CardFooter className="flex flex-row-reverse">
+        <Skeleton className="w-1/3 h-10" />
+      </CardFooter>
+    </Card>
+  );
+}
+
+function RecipeCardError() {
+  return (
+    <Card className="group h-full flex flex-col pt-0 overflow-hidden select-none dark:bg-card dark:border-input text-destructive">
+      <TriangleAlert className="h-12 w-12" />
+      <div>Failed to load</div>
+    </Card>
   );
 }
 
 export function RecipeCard({ recipeId }: { recipeId: number }) {
   const { data: recipe, isLoading, error } = useRecipe(recipeId);
   if (isLoading || !recipe) {
-    return (
-      <Card className="h-full flex flex-col items-center justify-center">
-        <span className="text-sm text-muted-foreground">Loading...</span>
-      </Card>
-    );
+    return <RecipeCardSkeleton />;
   }
-
   if (error) {
-    return (
-      <Card className="h-full flex flex-col items-center justify-center">
-        <span className="text-sm text-red-500">Failed to load</span>
-      </Card>
-    );
+    return <RecipeCardError />;
   }
   const imageSrc = recipe.hasImage
     ? recipesAPI.getImageUrl(recipe.id)
@@ -99,36 +120,23 @@ export function RecipeCardFooter({
     <CardFooter
       className={`w-full flex ${onLeft ? "flex-row-reverse" : "flex-row"} justify-between gap-2`}
     >
-      {recipeId < 0 ? (
-        <Badge variant="secondary">AI</Badge>
-      ) : (
-        <StarRating recipeId={recipeId} />
-      )}
-      {isRecipeInPlan ? (
-        <Button
-          variant="default"
-          size="lg"
-          onClick={(e) => {
-            e.stopPropagation();
-            removeFromPlan(recipeId);
-          }}
-        >
+      <StarRating recipeId={recipeId} />
+      <Button
+        variant="default"
+        size="lg"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isRecipeInPlan) removeFromPlan(recipeId);
+          else addToPlan(recipeId);
+        }}
+      >
+        {isRecipeInPlan ? (
           <Check className="h-4 w-4 mr-2" />
-          Cooking
-        </Button>
-      ) : (
-        <Button
-          variant="default"
-          size="lg"
-          onClick={(e) => {
-            e.stopPropagation();
-            addToPlan(recipeId);
-          }}
-        >
+        ) : (
           <PlusIcon className="h-4 w-4 mr-2" />
-          Cook
-        </Button>
-      )}
+        )}
+        {isRecipeInPlan ? "Cooking" : "Cook"}
+      </Button>
     </CardFooter>
   );
 }
