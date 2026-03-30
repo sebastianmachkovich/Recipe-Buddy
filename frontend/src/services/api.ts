@@ -51,8 +51,7 @@ export interface Recipe {
   id: number;
   name: string;
   description: string | null;
-  imgUrl: string | null;
-  hasImage?: boolean;
+  imgUrl?: string;
   rating: number | null;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
@@ -131,7 +130,7 @@ export interface AuthStatusResponse {
   user: AuthUser | null;
 }
 
-export type RecipeWritePayload = Omit<Recipe, "id">;
+export type RecipeWritePayload = Omit<Recipe, "id" | "imgUrl">;
 
 // Ingredient API
 export const ingredientsAPI = {
@@ -151,6 +150,7 @@ export const recipesAPI = {
   getById: (id: number) => api.get<Recipe>(`/recipes/${id}`),
 
   getImageUrl: (id: number) => `${API_URL}/recipes/${id}/image`,
+  getImage: (id: number) => api.get<Blob>(`${API_URL}/recipes/${id}/image`, { responseType: "blob" }),
 
   uploadImage: (id: number, file: File) => {
     const formData = new FormData();

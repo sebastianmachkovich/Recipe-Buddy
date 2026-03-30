@@ -72,9 +72,8 @@ export function RecipeCard({ recipeId }: { recipeId: number }) {
   if (error) {
     return <RecipeCardError />;
   }
-  const imageSrc = recipe.hasImage
-    ? recipesAPI.getImageUrl(recipe.id)
-    : recipe.imgUrl || BowlWhisk;
+
+  const imageSrc = recipe.imgUrl || BowlWhisk;
 
   return (
     <EditRecipeDialogProvider recipeId={recipeId}>

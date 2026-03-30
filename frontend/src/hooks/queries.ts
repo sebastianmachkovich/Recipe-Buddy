@@ -79,7 +79,11 @@ export function useRecipe(id?: number) {
     queryKey: ["recipes", id],
     queryFn: async () => {
       const response = await recipesAPI.getById(id!);
-      return response.data;
+      const imageResponse = await recipesAPI.getImage(id!);
+      return {
+        ...response.data,
+        imgUrl: URL.createObjectURL(imageResponse.data),
+      };
     },
     enabled: !!id,
   }, qc);
@@ -97,28 +101,28 @@ export function useAllRecipes() {
 
 export function useAddRecipe() {
   return useMutation({
-    mutationFn: ({ id, ...rest }: Recipe) => recipesAPI.create(rest),
-    async onMutate(value, context) {
-      await context.client.cancelQueries({ queryKey: ["recipes", value.id] });
-      await context.client.cancelQueries({ queryKey: ["recipeIds"] });
-      await context.client.cancelQueries({ queryKey: ["planIds"] });
-      const prevRecipe = context.client.getQueryData<number>(["recipes", value.id]);
-      const prevRecipeIds = context.client.getQueryData<number[]>(["recipeIds"]);
-      const prevPlanIds = context.client.getQueryData<number[]>(["planIds"]);
+    mutationFn: ({ id, imgUrl, ...rest }: Recipe) => recipesAPI.create(rest),
+    onMutate(value, context) {
       context.client.setQueryData(["recipes", value.id], value);
       context.client.setQueryData<number[]>(["recipeIds"], (ids) => [...(ids || []), value.id]);
       context.client.setQueryData<number[]>(["planIds"], (ids) => [...(ids || []), value.id]);
-      return { prevRecipe, prevRecipeIds, prevPlanIds };
+      return { prevRecipeIds: context.client.getQueryData<number[]>(["recipeIds"]) };
     },
-    onError(error, value, onMutateResult, context) {
-      context.client.setQueryData(["recipes", value.id], onMutateResult?.prevRecipe);
+    onSuccess(data, variables, onMutateResult, context) {
+      // Clean up the temp-ID cache entry
+      context.client.removeQueries({ queryKey: ["recipes", variables.id] });
+    },
+    onError(error, variables, onMutateResult, context) {
+      context.client.removeQueries({ queryKey: ["recipes", variables.id] });
       context.client.setQueryData<number[]>(["recipeIds"], onMutateResult?.prevRecipeIds);
-      context.client.setQueryData<number[]>(["planIds"], onMutateResult?.prevPlanIds);
+      toast.error("Failed to create recipe", { description: error.message });
     },
-    async onSettled(data, error, value, onMutateResult, context) {
-      await context.client.invalidateQueries({ queryKey: ["recipes", value.id] });
-      await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
-      await context.client.invalidateQueries({ queryKey: ["planIds"] });
+    onSettled(data, error, variables, onMutateResult, context) {
+      if (data) {
+        context.client.invalidateQueries({ queryKey: ["recipes", data.data.id] });
+      }
+      context.client.invalidateQueries({ queryKey: ["recipeIds"] });
+      context.client.invalidateQueries({ queryKey: ["planIds"] });
     },
   }, qc);
 }
@@ -152,38 +156,32 @@ export function useRemoveRecipe() {
       // TODO: Notify user.
     },
     async onSettled(data, error, id, onMutateResult, context) {
-      await context.client.invalidateQueries({ queryKey: ["recipes", id] });
-      await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
-      await context.client.invalidateQueries({ queryKey: ["planIds"] });
+      context.client.invalidateQueries({ queryKey: ["recipes", id] });
+      context.client.invalidateQueries({ queryKey: ["recipeIds"] });
+      context.client.invalidateQueries({ queryKey: ["planIds"] });
     },
   }, qc);
 }
 
 export function useUpdateRecipe() {
   return useMutation({
-    mutationFn: ({ id, ...rest }: Recipe) => recipesAPI.update(id, rest),
+    mutationFn: ({ id, imgUrl, ...rest }: Recipe) => recipesAPI.update(id, rest),
     async onMutate(value, context) {
       await context.client.cancelQueries({ queryKey: ["recipes", value.id] });
-      await context.client.cancelQueries({ queryKey: ["recipeIds"] });
-      await context.client.cancelQueries({ queryKey: ["planIds"] });
-      const prevRecipe = context.client.getQueryData<number>(["recipes", value.id]);
-      const prevRecipeIds = context.client.getQueryData<number[]>(["recipeIds"]);
-      const prevPlanIds = context.client.getQueryData<number[]>(["planIds"]);
+      const prevRecipe = context.client.getQueryData<Recipe>(["recipes", value.id]);
       context.client.setQueryData(["recipes", value.id], value);
-      context.client.setQueryData<number[]>(["recipeIds"], (ids) => [...(ids || []), value.id]);
-      context.client.setQueryData<number[]>(["planIds"], (ids) => [...(ids || []), value.id]);
-      return { prevRecipe, prevRecipeIds, prevPlanIds };
+      return { prevRecipe };
     },
-    onError(error, value, onMutateResult, context) {
-      context.client.setQueryData(["recipes", value.id], onMutateResult?.prevRecipe);
-      context.client.setQueryData<number[]>(["recipeIds"], onMutateResult?.prevRecipeIds);
-      context.client.setQueryData<number[]>(["planIds"], onMutateResult?.prevPlanIds);
-      // TODO: Notify user.
+    onSuccess(data, variables, context) {
+      toast.success("Recipe updated");
     },
-    async onSettled(data, error, value, onMutateResult, context) {
-      await context.client.invalidateQueries({ queryKey: ["recipes", value.id] });
-      await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
-      await context.client.invalidateQueries({ queryKey: ["planIds"] });
+    onError(error, variables, onMutateResult, context) {
+      context.client.setQueryData(["recipes", variables.id], onMutateResult?.prevRecipe);
+      toast.error("Failed to update recipe", { description: error.message });
+    },
+    onSettled(data, error, variables, onMutateResult, context) {
+      context.client.invalidateQueries({ queryKey: ["recipes", variables.id] });
+      context.client.invalidateQueries({ queryKey: ["recipeIds"] });
     },
   }, qc);
 }
@@ -267,7 +265,7 @@ export function useUploadImage() {
       await context.client.cancelQueries({ queryKey: ["recipes", variables.recipeId] });
       const prevRecipe = context.client.getQueryData<number>(["recipes", variables.recipeId]);
       context.client.setQueryData(["recipes", variables.recipeId], (prev: Recipe | undefined) =>
-        prev ? { ...prev, hasImage: true } : prev,
+        prev ? { ...prev, imgUrl: URL.createObjectURL(variables.file) } : prev,
       );
       return { prevRecipe };
     },

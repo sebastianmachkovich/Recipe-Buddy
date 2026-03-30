@@ -12,13 +12,10 @@ ALLOWED_RECIPE_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
 def serialize_recipe(recipe: Recipe) -> dict[str, Any]:
-    image_data = cast(bytes | None, recipe.image_data)
     return {
         "id": recipe.id,
         "name": recipe.name,
         "description": recipe.description,
-        "imgUrl": recipe.imgUrl,
-        "hasImage": image_data is not None,
         "rating": recipe.rating,
         "ingredients": recipe.ingredients or [],
         "steps": recipe.steps or [],
@@ -75,7 +72,6 @@ def create_recipe_for_user(db: Session, user: User, payload: RecipeWritePayload)
     recipe = Recipe(
         name=payload.name,
         description=payload.description,
-        imgUrl=payload.imgUrl,
         rating=payload.rating,
         ingredients=[item.model_dump() for item in payload.ingredients],
         steps=[item.model_dump() for item in payload.steps],
@@ -106,7 +102,6 @@ def update_recipe_for_user(db: Session, user: User, recipe_id: int, payload: Rec
 
     setattr(recipe, "name", payload.name)
     setattr(recipe, "description", payload.description)
-    setattr(recipe, "imgUrl", payload.imgUrl)
     setattr(recipe, "rating", payload.rating)
     setattr(recipe, "ingredients", [item.model_dump() for item in payload.ingredients])
     setattr(recipe, "steps", [item.model_dump() for item in payload.steps])

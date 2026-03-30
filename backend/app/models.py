@@ -10,7 +10,6 @@ class Recipe(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    imgUrl = Column(String(255), nullable=True)
     image_data = Column(LargeBinary, nullable=True)
     image_mime = Column(String(100), nullable=True)
     image_filename = Column(String(255), nullable=True)

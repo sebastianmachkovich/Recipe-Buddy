@@ -32,9 +32,9 @@ export default function EditRecipeDialogProvider({
 }) {
   const { data: recipe } = useRecipe(recipeId);
   const { data: recipeIds } = useRecipeIds();
-  const { mutateAsync: addRecipe } = useAddRecipe();
-  const { mutateAsync: updateRecipe } = useUpdateRecipe();
-  const { mutateAsync: uploadImage } = useUploadImage();
+  const { mutate: addRecipe } = useAddRecipe();
+  const { mutate: updateRecipe } = useUpdateRecipe();
+  const { mutate: uploadImage } = useUploadImage();
 
   // Observes whether the dialog is open.  Needed because we use a <DialogTrigger>
   // to open the it, rather than a prop.
@@ -97,14 +97,18 @@ export default function EditRecipeDialogProvider({
 
     // Updates the recipe in the list if it exists, or creates a new one and
     // appends it to the list.
-    const savedRecipe = recipe
-      ? await updateRecipe(editedRecipe)
-      : await addRecipe(editedRecipe);
-
-    // FIXME: This should not be a separate request!  It should be part of
-    //        `updateRecipe` and `addRecipe`.
-    if (imageFile) {
-      await uploadImage({ recipeId: recipeId!, file: imageFile });
+    if (recipe) {
+      updateRecipe(editedRecipe);
+    } else {
+      addRecipe(editedRecipe, {
+        onSuccess(data) {
+          if (imageFile) {
+            // FIXME: This should not be a separate request!  It should be part of
+            //        `updateRecipe` and `addRecipe`.
+            uploadImage({ recipeId: data.data.id, file: imageFile });
+          }
+        },
+      });
     }
 
     // Manually closes the dialog.

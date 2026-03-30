@@ -17,7 +17,6 @@ class RecipeStepPayload(BaseModel):
 class RecipeWritePayload(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = None
-    imgUrl: str | None = None
     rating: int | None = Field(default=0, ge=0, le=5)
     ingredients: list[RecipeIngredientPayload] = Field(default_factory=list)
     steps: list[RecipeStepPayload] = Field(default_factory=list)

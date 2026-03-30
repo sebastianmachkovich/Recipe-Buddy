@@ -24,7 +24,6 @@ export function deepCopyRecipe(
     id: newId,
     name: "",
     description: "",
-    imgUrl: "",
     rating: 0,
     ingredients: [],
     steps: [],

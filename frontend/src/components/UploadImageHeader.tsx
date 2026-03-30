@@ -1,5 +1,4 @@
 import { Recipe } from "@/services/api";
-import { recipesAPI } from "@/services/api";
 import { Dispatch, SetStateAction, useRef, useState } from "react";
 import { DialogHeader, DialogTitle } from "./ui/dialog";
 import { VisuallyHidden } from "radix-ui";
@@ -37,11 +36,7 @@ export function UploadImageHeader({
     setImagePreviewUrl(blobUrl);
   }
 
-  const displayImageUrl =
-    imagePreviewUrl ||
-    (editedRecipe.hasImage
-      ? recipesAPI.getImageUrl(editedRecipe.id)
-      : editedRecipe.imgUrl);
+  const displayImageUrl = imagePreviewUrl || editedRecipe.imgUrl;
 
   return (
     <>

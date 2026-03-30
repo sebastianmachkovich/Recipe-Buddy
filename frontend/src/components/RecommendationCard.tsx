@@ -16,9 +16,7 @@ export default function RecommendationCard({
 }) {
   const { data: recipe, isLoading } = useRecipe(recipeId);
   if (isLoading || !recipe) return <RecommendationCardSkeleton />;
-  const imageSrc = recipe.hasImage
-    ? recipesAPI.getImageUrl(recipe.id)
-    : recipe.imgUrl || BowlWhisk;
+  const imageSrc = recipe.imgUrl || BowlWhisk;
 
   return (
     <EditRecipeDialogProvider recipeId={recipeId}>
