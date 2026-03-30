@@ -2,6 +2,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogTrigger,
 } from "./ui/dialog";
@@ -115,6 +116,7 @@ export default function EditRecipeDialogProvider({
       <DialogTrigger asChild>{children}</DialogTrigger>
       {open && editedRecipe && (
         <DialogContent className="max-h-[calc(100vh-2rem)] grid-rows-[auto_1fr_auto]">
+          <DialogDescription className="hidden">Edit Recipe</DialogDescription>
           <UploadImageHeader
             editedRecipe={editedRecipe}
             imagePreviewUrl={imagePreviewUrl}
