@@ -73,44 +73,39 @@ function LogoutButton() {
   const { mutate: logout, isPending: isLoggingOut } = useLogout(navigate);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   return (
-    <SidebarMenuItem>
-      <AlertDialog
-        open={isLogoutDialogOpen}
-        onOpenChange={setIsLogoutDialogOpen}
-      >
-        <SidebarMenuItem key={"/"}>
-          <SidebarMenuButton
-            tooltip={"Log out"}
-            className="cursor-pointer"
-            onClick={() => setIsLogoutDialogOpen(true)}
-            aria-label="Log out"
+    <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+      <SidebarMenuItem key={"/"}>
+        <SidebarMenuButton
+          tooltip={"Log out"}
+          className="cursor-pointer"
+          onClick={() => setIsLogoutDialogOpen(true)}
+          aria-label="Log out"
+          disabled={isLoggingOut}
+        >
+          <LogOut className="size-4" />
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Log out?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Would you like to log out or stay signed in?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isLoggingOut}>
+            Stay signed in
+          </AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
             disabled={isLoggingOut}
+            onClick={() => logout()}
           >
-            <LogOut className="size-4" />
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Log out?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Would you like to log out or stay signed in?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoggingOut}>
-              Stay signed in
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={isLoggingOut}
-              onClick={() => logout()}
-            >
-              {isLoggingOut ? "Logging out..." : "Log out"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </SidebarMenuItem>
+            {isLoggingOut ? "Logging out..." : "Log out"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
