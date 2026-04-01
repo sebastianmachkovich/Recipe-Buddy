@@ -70,7 +70,7 @@ function AppSidebarButton({
 
 function LogoutButton() {
   const navigate = useNavigate();
-  const { mutate: logout, isPending: isLoggingOut } = useLogout(navigate);
+  const { mutate: logout, isPending: isLoggingOut } = useLogout();
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   return (
     <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
@@ -99,7 +99,7 @@ function LogoutButton() {
           <AlertDialogAction
             variant="destructive"
             disabled={isLoggingOut}
-            onClick={() => logout()}
+            onClick={() => logout(navigate)}
           >
             {isLoggingOut ? "Logging out..." : "Log out"}
           </AlertDialogAction>

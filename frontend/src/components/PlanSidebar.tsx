@@ -18,10 +18,10 @@ import { useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 export default function PlanSidebar() {
-  const { data: recipeIdsInPlan } = usePlanIds();
   const isAuthPage = useRouterState({
     select: (state) => state.location.pathname === "/",
   });
+  const { data: recipeIdsInPlan } = usePlanIds(isAuthPage);
 
   return (
     <SidebarProvider

@@ -9,7 +9,7 @@ export function StarRating({ recipeId }: { recipeId: number }) {
   const [hoveredRating, setHoveredRating] = useState(0);
 
   function computeHoveredRating(rating: number) {
-    if (!hovered) return recipe?.rating ?? 0 >= rating;
+    if (!hovered) return (recipe?.rating ?? 0) >= rating;
     return hoveredRating >= rating;
   }
 
