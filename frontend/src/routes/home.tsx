@@ -16,8 +16,8 @@ import {
   AIRecipeResponse,
   AIRecipeSuggestion,
   aiAPI,
+  getAuthStatus,
 } from "@/services/api";
-import { authAPI } from "@/services/api";
 
 function getApiErrorMessage(error: unknown): string | null {
   const detail = (error as { response?: { data?: { detail?: unknown } } })
@@ -259,7 +259,7 @@ function HomePage() {
 export const Route = createFileRoute("/home")({
   beforeLoad: async () => {
     try {
-      const response = await authAPI.status();
+      const response = await getAuthStatus();
       if (!response.data.authenticated) {
         throw redirect({ to: "/" });
       }

@@ -1,6 +1,6 @@
 import { AddRecipeCard, RecipeCard } from "@/components/RecipeCard";
 import { useRecipeIds } from "@/hooks/queries";
-import { authAPI } from "@/services/api";
+import { getAuthStatus } from "@/services/api";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 function RecipesPage() {
@@ -25,7 +25,7 @@ function RecipesPage() {
 export const Route = createFileRoute("/recipes")({
   beforeLoad: async () => {
     try {
-      const response = await authAPI.status();
+      const response = await getAuthStatus();
       if (!response.data.authenticated) {
         throw redirect({ to: "/" });
       }

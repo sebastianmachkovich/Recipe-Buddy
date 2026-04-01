@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
-import { authAPI } from "@/services/api";
+import { getAuthStatus } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -112,7 +112,7 @@ function AuthPage() {
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
     try {
-      const response = await authAPI.status();
+      const response = await getAuthStatus();
       if (!response.data.authenticated) {
         return;
       }

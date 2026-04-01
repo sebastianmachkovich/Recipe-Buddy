@@ -1,5 +1,4 @@
 import { IngredientUnit } from "@/services/api";
-import { recipesAPI } from "@/services/api";
 import { Card, CardDescription, CardTitle } from "./ui/card";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
 import { RecipeCardFooter } from "@/components/RecipeCard";

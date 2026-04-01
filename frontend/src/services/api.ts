@@ -134,84 +134,30 @@ export interface AuthStatusResponse {
 
 export type RecipeWritePayload = Omit<Recipe, "id" | "imgUrl">;
 
-// Ingredient API
-export const ingredientsAPI = {
-  getAll: (search?: string) =>
-    api.get<Ingredient[]>("/ingredients/", { params: { search } }),
+// // Ingredient API
+// export const ingredientsAPI = {
+//   getAll: (search?: string) =>
+//     api.get<Ingredient[]>("/ingredients/", { params: { search } }),
+//
+//   getById: (id: number) => api.get<Ingredient>(`/ingredients/${id}`),
+//
+//   create: (data: { name: string; category?: string }) =>
+//     api.post<Ingredient>("/ingredients/", data),
+// };
 
-  getById: (id: number) => api.get<Ingredient>(`/ingredients/${id}`),
-
-  create: (data: { name: string; category?: string }) =>
-    api.post<Ingredient>("/ingredients/", data),
-};
-
-// Recipe API
-export const recipesAPI = {
-  getAll: () => api.get<Recipe[]>("/recipes/"),
-
-  getById: (id: number) => api.get<Recipe>(`/recipes/${id}`),
-
-  getImageUrl: (id: number) => `${API_URL}/recipes/${id}/image`,
-  getImage: (id: number) => api.get<Blob>(`${API_URL}/recipes/${id}/image`, { responseType: "blob" }),
-
-  uploadImage: (id: number, file: File) => {
-    const formData = new FormData();
-    formData.append("image", file);
-    return api.post<{
-      recipe_id: number;
-      filename: string | null;
-      mime: string | null;
-      size_bytes: number | null;
-    }>(`/recipes/${id}/image`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-  },
-
-  create: (data: RecipeWritePayload) => api.post<Recipe>("/recipes/", data),
-
-  update: (id: number, data: RecipeWritePayload) =>
-    api.put<Recipe>(`/recipes/${id}`, data),
-
-  delete: (id: number) => api.delete(`/recipes/${id}`),
-};
-
-export const authAPI = {
-  signup: (data: { email: string; password: string }) =>
-    api.post<AuthUser>("/auth/signup", data),
-
-  login: (data: { email: string; password: string }) =>
-    api.post<AuthUser>("/auth/login", data),
-
-  logout: () => api.post<{ message: string }>("/auth/logout"),
-
-  me: () => api.get<AuthUser>("/auth/me"),
-
-  status: () => api.get<AuthStatusResponse>("/auth/status"),
-};
-
-export const planAPI = {
-  getAll: () => api.get<number[]>("/plan/"),
-  add: (recipeId: number) =>
-    api.post<{ recipe_id: number }>(`/plan/${recipeId}`),
-  remove: (recipeId: number) =>
-    api.delete<{ deleted: boolean }>(`/plan/${recipeId}`),
-};
-
-// Pantry API
-export const pantryAPI = {
-  getAll: () => api.get<PantryItem[]>("/pantry/"),
-
-  add: (data: {
-    ingredient_id: number;
-    quantity?: string;
-    unit?: string;
-    expiry_date?: string;
-  }) => api.post<PantryItem>("/pantry/", data),
-
-  remove: (id: number) => api.delete(`/pantry/${id}`),
-};
+// // Pantry API
+// export const pantryAPI = {
+//   getAll: () => api.get<PantryItem[]>("/pantry/"),
+//
+//   add: (data: {
+//     ingredient_id: number;
+//     quantity?: string;
+//     unit?: string;
+//     expiry_date?: string;
+//   }) => api.post<PantryItem>("/pantry/", data),
+//
+//   remove: (id: number) => api.delete(`/pantry/${id}`),
+// };
 
 export const aiAPI = {
   generateRecipes: (data: AIRecipeRequest) =>
@@ -225,15 +171,14 @@ export const aiAPI = {
     }),
 };
 
-
-
-
-
+export function getAuthStatus() {
+  return api.get<AuthStatusResponse>("/auth/status");
+}
 
 export const currentUserQuery = queryOptions({
   queryKey: ["currentUser"],
   async queryFn() {
-    const response = await authAPI.status();
+    const response = await getAuthStatus();
     return response.data.user;
   },
   retry: false,
@@ -241,7 +186,7 @@ export const currentUserQuery = queryOptions({
 
 export const loginMutation = mutationOptions({
   async mutationFn(payload: { email: string; password: string }) {
-    const response = await authAPI.login(payload);
+    const response = await api.post<AuthUser>("/auth/login", payload);
     return response.data;
   },
   async onSuccess(user, variables, onMutateResult, context) {
@@ -257,7 +202,7 @@ export const loginMutation = mutationOptions({
 
 export const signupMutation = mutationOptions({
   async mutationFn(payload: { email: string; password: string }) {
-    const response = await authAPI.signup(payload);
+    const response = await api.post<AuthUser>("/auth/signup", payload);
     return response.data;
   },
   async onSuccess(user, variables, onMutateResult, context) {
@@ -272,7 +217,7 @@ export const signupMutation = mutationOptions({
 });
 
 export const logoutMutation = mutationOptions({
-  mutationFn: () => authAPI.logout(),
+  mutationFn: () => api.post<{ message: string }>("/auth/logout"),
   async onMutate(navigate: UseNavigateResult<string>) {
     await navigate({ to: "/" });
   },
@@ -290,8 +235,8 @@ export const logoutMutation = mutationOptions({
 export const recipeQuery = (id: number) => queryOptions({
   queryKey: ["recipes", id],
   async queryFn() {
-    const response = await recipesAPI.getById(id!);
-    const imageResponse = await recipesAPI.getImage(id!);
+    const response = await api.get<Recipe>(`/recipes/${id}`);
+    const imageResponse = await api.get<Blob>(`${API_URL}/recipes/${id}/image`, { responseType: "blob" });
     return {
       ...response.data,
       imgUrl: URL.createObjectURL(imageResponse.data),
@@ -303,13 +248,13 @@ export const recipeQuery = (id: number) => queryOptions({
 export const allRecipesQuery = queryOptions({
   queryKey: ["recipes"],
   async queryFn() {
-    const response = await recipesAPI.getAll();
+    const response = await api.get<Recipe[]>("/recipes/");
     return response.data;
   },
 });
 
 export const addRecipeMutation = mutationOptions({
-  mutationFn: ({ id, imgUrl, ...rest }: Recipe) => recipesAPI.create(rest),
+  mutationFn: ({ id, imgUrl, ...rest }: Recipe) => api.post<Recipe>("/recipes/", rest),
   onMutate(value, context) {
     context.client.setQueryData(["recipes", value.id], value);
     context.client.setQueryData<number[]>(["recipeIds"], (ids) => [...(ids || []), value.id]);
@@ -336,7 +281,7 @@ export const addRecipeMutation = mutationOptions({
 
 export const removeRecipeMutation = mutationOptions({
   async mutationFn(id: number) {
-      await recipesAPI.delete(id);
+      await api.delete(`/recipes/${id}`);
       return id;
   },
   async onMutate(id, context) {
@@ -369,7 +314,7 @@ export const removeRecipeMutation = mutationOptions({
 });
 
 export const updateRecipeMutation = mutationOptions({
-  mutationFn: ({ id, imgUrl, ...rest }: Recipe) => recipesAPI.update(id, rest),
+  mutationFn: ({ id, imgUrl, ...rest }: Recipe) => api.put<Recipe>(`/recipes/${id}`, rest),
   async onMutate(value, context) {
     await context.client.cancelQueries({ queryKey: ["recipes", value.id] });
     const prevRecipe = context.client.getQueryData<Recipe>(["recipes", value.id]);
@@ -392,7 +337,7 @@ export const updateRecipeMutation = mutationOptions({
 export const recipeIdsQuery = queryOptions({
   queryKey: ["recipeIds"],
   async queryFn() {
-    const response = await recipesAPI.getAll();
+    const response = await api.get<Recipe[]>("/recipes/");
     return response.data.map((recipe) => recipe.id);
   },
 });
@@ -401,13 +346,13 @@ export const planIdsQuery = (isAuthPage: boolean) => queryOptions({
   queryKey: ["planIds"],
   async queryFn() {
     if (isAuthPage) return [];
-    const response = await planAPI.getAll();
+    const response = await api.get<number[]>("/plan/");
     return response.data;
   },
 });
 
 export const addToPlanMutation = mutationOptions({
-  mutationFn: (id: number) => planAPI.add(id),
+  mutationFn: (id: number) => api.post<{ recipe_id: number }>(`/plan/${id}`),
   async onMutate(value, context) {
     await context.client.cancelQueries({ queryKey: ["planIds"] });
     const prev = context.client.getQueryData<number[]>(["planIds"]);
@@ -430,7 +375,7 @@ export const addToPlanMutation = mutationOptions({
 });
 
 export const removeFromPlanMutation = mutationOptions({
-  mutationFn: (id: number) => planAPI.remove(id),
+  mutationFn: (id: number) => api.delete<{ deleted: boolean }>(`/plan/${id}`),
   async onMutate(value, context) {
     await context.client.cancelQueries({ queryKey: ["planIds"] });
     const prev = context.client.getQueryData<number[]>(["planIds"]);
@@ -453,8 +398,20 @@ export const removeFromPlanMutation = mutationOptions({
 });
 
 export const uploadImageMutation = mutationOptions({
-  mutationFn: ({ recipeId, file }: { recipeId: number; file: File }) =>
-    recipesAPI.uploadImage(recipeId, file),
+  mutationFn: ({ recipeId, file }: { recipeId: number; file: File }) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    return api.post<{
+      recipe_id: number;
+      filename: string | null;
+      mime: string | null;
+      size_bytes: number | null;
+    }>(`/recipes/${recipeId}/image`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
   async onMutate(variables, context) {
     await context.client.cancelQueries({ queryKey: ["recipes", variables.recipeId] });
     const prevRecipe = context.client.getQueryData<number>(["recipes", variables.recipeId]);
@@ -471,6 +428,3 @@ export const uploadImageMutation = mutationOptions({
     await context.client.invalidateQueries({ queryKey: ["recipes", variables.recipeId] });
   },
 });
-
-
-export default api;

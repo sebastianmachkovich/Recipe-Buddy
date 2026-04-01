@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCurrentUser } from "@/hooks/queries";
-import { authAPI } from "@/services/api";
+import { getAuthStatus } from "@/services/api";
 
 function ProfilePage() {
   const { data: user, isLoading } = useCurrentUser();
@@ -31,7 +31,7 @@ function ProfilePage() {
 export const Route = createFileRoute("/profile")({
   beforeLoad: async () => {
     try {
-      const response = await authAPI.status();
+      const response = await getAuthStatus();
       if (!response.data.authenticated) {
         throw redirect({ to: "/" });
       }
