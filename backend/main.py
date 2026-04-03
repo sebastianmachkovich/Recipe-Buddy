@@ -1,7 +1,9 @@
 """Recipe Buddy FastAPI Application - Structured Setup."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from app.api.router import router as api_router
 from app.database import Base, engine
@@ -30,6 +32,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    msg = "; ".join([err.msg for err in exc.errors()])
+    return JSONResponse(
+        status_code=422,
+        content={"detail": msg},
+    )
 
 @app.get("/")
 def root():

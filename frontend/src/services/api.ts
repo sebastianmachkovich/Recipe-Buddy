@@ -122,6 +122,12 @@ export interface AIImageRecipeResponse {
   recipe_model: string;
 }
 
+export interface AIResponseData {
+  recipes: AIRecipeSuggestion[];
+  detected_ingredients: string[];
+  activeModelLabel: string;
+}
+
 export interface AuthUser {
   id: number;
   email: string;
@@ -158,18 +164,6 @@ export type RecipeWritePayload = Omit<Recipe, "id" | "imgUrl">;
 //
 //   remove: (id: number) => api.delete(`/pantry/${id}`),
 // };
-
-export const aiAPI = {
-  generateRecipes: (data: AIRecipeRequest) =>
-    api.post<AIRecipeResponse>("/api/ai/recipes", data),
-
-  generateRecipesFromImage: (formData: FormData) =>
-    api.post<AIImageRecipeResponse>("/api/ai/recipes/from-image", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    }),
-};
 
 export function getAuthStatus() {
   return api.get<AuthStatusResponse>("/auth/status");
@@ -426,5 +420,70 @@ export const uploadImageMutation = mutationOptions({
   },
   async onSettled(data, error, variables, onMutateResult, context) {
     await context.client.invalidateQueries({ queryKey: ["recipes", variables.recipeId] });
+  },
+});
+
+export const aiRecipesQuery = queryOptions<AIResponseData>({
+  queryKey: ["aiRecipes"],
+  enabled: false,
+  initialData: {
+    recipes: [],
+    detected_ingredients: [],
+    activeModelLabel: "",
+  },
+    async queryFn() { return qc.getQueryData(["aiRecipes"])!; },
+});
+
+export const generateAIRecipesMutation = mutationOptions({
+  mutationKey: ["generateAIRecipes"],
+  async mutationFn(input: string | File): Promise<AIResponseData> {
+    if (typeof input === "string") {
+      const ingredientList = input
+          .split(/,|\n/g)
+          .map((item) => item.trim())
+          .filter(Boolean);
+      const response = await api.post<AIRecipeResponse>("/api/ai/recipes", {
+        ingredients: ingredientList,
+        max_recipes: 5,
+      });
+      return ({
+        detected_ingredients: [],
+        activeModelLabel: response.data.model,
+        recipes: response.data.recipes,
+      });
+    } else {
+      const formData = new FormData();
+      formData.append("image", input);
+      formData.append("max_recipes", "5");
+
+      const response = await api.post<AIImageRecipeResponse>(
+        "/api/ai/recipes/from-image",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return ({
+        detected_ingredients: response.data.detected_ingredients,
+        activeModelLabel: `${response.data.vision_model} → ${response.data.recipe_model}`,
+        recipes: response.data.recipes,
+      });
+    }
+  },
+  onMutate(input, context) {
+    context.client.setQueryData<AIResponseData>(["aiRecipes"], {
+      recipes: [],
+      detected_ingredients: [],
+      activeModelLabel: "",
+    });
+    context.client.invalidateQueries({ queryKey: ["aiRecipes"] });
+  },
+  onError(error, variables, onMutateResult, context) {
+    toast.error("Failed to generate recipes", { description: error.message });
+  },
+  onSuccess(data, variables, onMutateResult, context) {
+      context.client.setQueryData<AIResponseData>(["aiRecipes"], data);
   },
 });

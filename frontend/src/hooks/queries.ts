@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
     addRecipeMutation,
     addToPlanMutation,
+    generateAIRecipesMutation,
     allRecipesQuery,
     currentUserQuery,
     loginMutation,
@@ -14,7 +15,8 @@ import {
     removeRecipeMutation,
     signupMutation,
     updateRecipeMutation,
-    uploadImageMutation
+    uploadImageMutation,
+    aiRecipesQuery
 } from "@/services/api";
 
 // User / Auth Hooks
@@ -35,6 +37,10 @@ export const useRecipeIds = () => useQuery(recipeIdsQuery, qc);
 export const usePlanIds = (isAuthPage: boolean) => useQuery(planIdsQuery(isAuthPage), qc);
 export const useAddToPlan = () => useMutation(addToPlanMutation, qc);
 export const useRemoveFromPlan = () => useMutation(removeFromPlanMutation, qc);
+
+// AI Hooks
+export const useAIRecipes = () => useQuery(aiRecipesQuery, qc);
+export const useGenerateAIRecipes = () => useMutation(generateAIRecipesMutation, qc);
 
 // Hooks that should be removed
 export const useUploadImage = () => useMutation(uploadImageMutation, qc);
