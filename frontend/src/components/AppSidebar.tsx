@@ -9,7 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { House, LogOut, ReceiptText, User } from "lucide-react";
+import { CookingPot, House, LogOut, ReceiptText, User } from "lucide-react";
 import { useState } from "react";
 import {
   Sidebar,
@@ -35,6 +35,11 @@ const sidebarItems = [
     label: "Recipes",
     icon: <ReceiptText className="size-4 shrink-0" />,
     route: "/recipes",
+  },
+  {
+    label: "Walkthrough",
+    icon: <CookingPot className="size-4 shrink-0" />,
+    route: "/walkthrough",
   },
   null,
   {

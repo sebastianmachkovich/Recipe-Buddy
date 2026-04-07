@@ -107,7 +107,7 @@ export function RecipeCardFooter({
   recipeId: number;
   onLeft: boolean;
 }) {
-  const { data: planIds } = usePlanIds();
+  const { data: planIds } = usePlanIds(false);
   const isRecipeInPlan = useMemo(
     () => planIds?.includes(recipeId),
     [planIds, recipeId],

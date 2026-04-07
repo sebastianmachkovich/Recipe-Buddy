@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WalkthroughRouteImport } from './routes/walkthrough'
 import { Route as RecipesRouteImport } from './routes/recipes'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as IndexRouteImport } from './routes/index'
 
+const WalkthroughRoute = WalkthroughRouteImport.update({
+  id: '/walkthrough',
+  path: '/walkthrough',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecipesRoute = RecipesRouteImport.update({
   id: '/recipes',
   path: '/recipes',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/recipes': typeof RecipesRoute
+  '/walkthrough': typeof WalkthroughRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/recipes': typeof RecipesRoute
+  '/walkthrough': typeof WalkthroughRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/recipes': typeof RecipesRoute
+  '/walkthrough': typeof WalkthroughRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/home' | '/profile' | '/recipes'
+  fullPaths: '/' | '/home' | '/profile' | '/recipes' | '/walkthrough'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/home' | '/profile' | '/recipes'
-  id: '__root__' | '/' | '/home' | '/profile' | '/recipes'
+  to: '/' | '/home' | '/profile' | '/recipes' | '/walkthrough'
+  id: '__root__' | '/' | '/home' | '/profile' | '/recipes' | '/walkthrough'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,10 +76,18 @@ export interface RootRouteChildren {
   HomeRoute: typeof HomeRoute
   ProfileRoute: typeof ProfileRoute
   RecipesRoute: typeof RecipesRoute
+  WalkthroughRoute: typeof WalkthroughRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/walkthrough': {
+      id: '/walkthrough'
+      path: '/walkthrough'
+      fullPath: '/walkthrough'
+      preLoaderRoute: typeof WalkthroughRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/recipes': {
       id: '/recipes'
       path: '/recipes'
@@ -107,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   HomeRoute: HomeRoute,
   ProfileRoute: ProfileRoute,
   RecipesRoute: RecipesRoute,
+  WalkthroughRoute: WalkthroughRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

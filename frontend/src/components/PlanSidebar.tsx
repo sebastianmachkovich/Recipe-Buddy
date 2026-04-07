@@ -14,21 +14,25 @@ import { Button } from "./ui/button";
 import { X } from "lucide-react";
 import EditRecipeDialogProvider from "./EditRecipeDialogProvider";
 import { usePlanIds, useRecipe, useRemoveFromPlan } from "@/hooks/queries";
-import { useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 export default function PlanSidebar() {
   const isAuthPage = useRouterState({
     select: (state) => state.location.pathname === "/",
   });
+  const isWalkthroughPage = useRouterState({
+    select: (state) => state.location.pathname === "/walkthrough",
+  });
   const { data: recipeIdsInPlan } = usePlanIds(isAuthPage);
+  const navigate = useNavigate();
 
   return (
     <SidebarProvider
       defaultOpen={true}
       className={cn(
         "w-fit overflow-hidden max-h-dvh",
-        isAuthPage ? "hidden" : "",
+        isAuthPage || isWalkthroughPage ? "hidden" : "",
       )}
     >
       <Sidebar
@@ -50,7 +54,11 @@ export default function PlanSidebar() {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <Button variant="default" className="w-full">
+          <Button
+            variant="default"
+            className="w-full"
+            onClick={() => navigate({ to: "/walkthrough" })}
+          >
             Let Me Cook!
           </Button>
         </SidebarFooter>
