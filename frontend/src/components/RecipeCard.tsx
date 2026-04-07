@@ -32,7 +32,7 @@ export function AddRecipeCard() {
   );
 }
 
-function RecipeCardSkeleton() {
+export function RecipeCardSkeleton() {
   return (
     <Card className="group h-full flex flex-col pt-0 overflow-hidden select-none dark:bg-card dark:border-input">
       <Skeleton className="aspect-4/3 w-full object-cover rounded-t-lg" />
