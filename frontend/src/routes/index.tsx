@@ -110,16 +110,5 @@ function AuthPage() {
 }
 
 export const Route = createFileRoute("/")({
-  beforeLoad: async () => {
-    try {
-      const response = await getAuthStatus();
-      if (!response.data.authenticated) {
-        return;
-      }
-      throw redirect({ to: "/home" });
-    } catch {
-      return;
-    }
-  },
   component: AuthPage,
 });

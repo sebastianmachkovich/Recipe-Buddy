@@ -7,14 +7,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  createFileRoute,
-  redirect,
-  useRouterState,
-} from "@tanstack/react-router";
+import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import { Camera, LucideIcon, Sparkles, Upload } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
-import { AIRecipeSuggestion, getAuthStatus } from "@/services/api";
+import { AIRecipeSuggestion, validateAuth } from "@/services/api";
 import { useAIRecipes, useGenerateAIRecipes } from "@/hooks/queries";
 import { toast } from "sonner";
 import { useIsMutating } from "@tanstack/react-query";
@@ -242,15 +238,6 @@ function ImageUploadButton({
 }
 
 export const Route = createFileRoute("/home")({
-  beforeLoad: async () => {
-    try {
-      const response = await getAuthStatus();
-      if (!response.data.authenticated) {
-        throw redirect({ to: "/" });
-      }
-    } catch {
-      throw redirect({ to: "/" });
-    }
-  },
+  beforeLoad: validateAuth,
   component: HomePage,
 });

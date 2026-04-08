@@ -4,13 +4,9 @@ import {
   RecipeCardSkeleton,
 } from "@/components/RecipeCard";
 import { useRecipeIds } from "@/hooks/queries";
-import { getAuthStatus } from "@/services/api";
 import { cn } from "@/lib/utils";
-import {
-  createFileRoute,
-  redirect,
-  useRouterState,
-} from "@tanstack/react-router";
+import { validateAuth } from "@/services/api";
+import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 function RecipesPageGrid({ children }: { children: React.ReactNode }) {
@@ -55,15 +51,6 @@ function RecipesPage() {
 }
 
 export const Route = createFileRoute("/recipes")({
-  beforeLoad: async () => {
-    try {
-      const response = await getAuthStatus();
-      if (!response.data.authenticated) {
-        throw redirect({ to: "/" });
-      }
-    } catch {
-      throw redirect({ to: "/" });
-    }
-  },
+  beforeLoad: validateAuth,
   component: RecipesPage,
 });

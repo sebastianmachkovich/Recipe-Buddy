@@ -1,8 +1,9 @@
 /// <reference types="vite/client" />
 
 import axios from "axios";
+import { router } from "@/main";
 import { mutationOptions, QueryClient, queryOptions} from "@tanstack/react-query";
-import { UseNavigateResult } from "@tanstack/react-router";
+import { redirect, UseNavigateResult } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 const browserHost =
@@ -24,6 +25,14 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+});
+
+api.interceptors.response.use(response => response, async error => {
+  if (error.response.status === 401) {
+    qc.clear();
+    await router.navigate({ to: "/" });
+  }
+  return Promise.reject(error);
 });
 
 export interface Ingredient {
@@ -165,14 +174,17 @@ export type RecipeWritePayload = Omit<Recipe, "id" | "imgUrl">;
 //   remove: (id: number) => api.delete(`/pantry/${id}`),
 // };
 
-export function getAuthStatus() {
-  return api.get<AuthStatusResponse>("/auth/status");
+export function validateAuth() {
+  const expiresAt = sessionStorage.getItem("authExpiresAt");
+  if (!expiresAt || Date.now() > parseInt(expiresAt)) {
+    throw redirect({ to: "/" });
+  }
 }
 
 export const currentUserQuery = queryOptions({
   queryKey: ["currentUser"],
   async queryFn() {
-    const response = await getAuthStatus();
+    const response = await api.get<AuthStatusResponse>("/auth/status");
     return response.data.user;
   },
   retry: false,
@@ -184,6 +196,7 @@ export const loginMutation = mutationOptions({
     return response.data;
   },
   async onSuccess(user, variables, onMutateResult, context) {
+    sessionStorage.setItem("authExpiresAt", String(Date.now() + 24 * 60 * 60 * 1000));
     context.client.setQueryData(["currentUser"], user);
     await context.client.invalidateQueries({ queryKey: ["planIds"] });
     await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
@@ -200,6 +213,7 @@ export const signupMutation = mutationOptions({
     return response.data;
   },
   async onSuccess(user, variables, onMutateResult, context) {
+    sessionStorage.setItem("authExpiresAt", String(Date.now() + 24 * 60 * 60 * 1000));
     context.client.setQueryData(["currentUser"], user);
     await context.client.invalidateQueries({ queryKey: ["planIds"] });
     await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
