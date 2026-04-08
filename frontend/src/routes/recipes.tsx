@@ -5,12 +5,22 @@ import {
 } from "@/components/RecipeCard";
 import { useRecipeIds } from "@/hooks/queries";
 import { getAuthStatus } from "@/services/api";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
+import {
+  createFileRoute,
+  redirect,
+  useRouterState,
+} from "@tanstack/react-router";
 import { toast } from "sonner";
 
 function RecipesPageGrid({ children }: { children: React.ReactNode }) {
+  const isNavigatingAway = useRouterState({
+    select: (state) =>
+      state.location.pathname === "/" ||
+      state.location.pathname === "/walkthrough",
+  });
   return (
-    <div className="container mx-auto p-6">
+    <div className={cn("container mx-auto p-6", isNavigatingAway && "hidden")}>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
         {children}
       </div>

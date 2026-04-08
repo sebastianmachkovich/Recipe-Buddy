@@ -7,20 +7,35 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  redirect,
+  useRouterState,
+} from "@tanstack/react-router";
 import { Camera, LucideIcon, Sparkles, Upload } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { AIRecipeSuggestion, getAuthStatus } from "@/services/api";
 import { useAIRecipes, useGenerateAIRecipes } from "@/hooks/queries";
 import { toast } from "sonner";
 import { useIsMutating } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 function HomePage() {
+  const isNavigatingAway = useRouterState({
+    select: (state) =>
+      state.location.pathname === "/" ||
+      state.location.pathname === "/walkthrough",
+  });
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | undefined>(
     undefined,
   );
   return (
-    <div className="mx-auto p-6 flex flex-col items-center gap-6 w-full">
+    <div
+      className={cn(
+        "mx-auto p-6 flex flex-col items-center gap-6 w-full",
+        isNavigatingAway && "hidden",
+      )}
+    >
       <Card className="w-full max-w-5xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
