@@ -338,7 +338,6 @@ export const updateRecipeMutation = mutationOptions({
   },
   onSettled(data, error, variables, onMutateResult, context) {
     context.client.invalidateQueries({ queryKey: ["recipes", variables.id] });
-    context.client.invalidateQueries({ queryKey: ["recipeIds"] });
   },
 });
 
@@ -346,7 +345,9 @@ export const recipeIdsQuery = queryOptions({
   queryKey: ["recipeIds"],
   async queryFn() {
     const response = await api.get<Recipe[]>("/recipes/");
-    return response.data.map((recipe) => recipe.id);
+    return response.data
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((recipe) => recipe.id)
   },
 });
 
