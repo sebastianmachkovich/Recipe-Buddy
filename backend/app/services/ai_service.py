@@ -298,13 +298,19 @@ async def detect_ingredients_from_image(file: UploadFile) -> tuple[list[str], st
             unique_models.append(model_name)
         vision_models = unique_models
 
+    # IMPORTANT: We want to avoid generating recipes from arbitrary images.
+    # The vision step must explicitly confirm the photo contains ingredients.
     system_prompt = (
-        "You identify cooking ingredients from a photo. "
-        "Return strict JSON only in this exact shape: "
-        '{"ingredients": [{"name": string, "confidence": number}]}. '
-        "Rules: include only food ingredients, no utensils/containers/background objects, "
-        "prefer singular ingredient names (e.g., tomato, onion, garlic), "
-        "and use confidence from 0 to 1."
+        "You are a vision ingredient detector for a cooking app. "
+        "Your job is to decide whether the image contains visible cooking ingredients (e.g., raw produce, spices, "
+        "meat, pantry items) that can reasonably be listed. "
+        "If the image is not clearly ingredients (selfies, pets, landscapes, memes, objects, receipts, screenshots, "
+        "or primarily a prepared dish with no identifiable ingredients), then you MUST set contains_ingredients=false "
+        "and return an empty ingredients list. "
+        "Return STRICT JSON only with this exact schema and no extra keys: "
+        '{"contains_ingredients": boolean, "ingredients": [{"name": string, "confidence": number}]}. '
+        "Rules: include only edible ingredients, exclude utensils/containers/brands/background objects, "
+        "prefer concise singular names (e.g., tomato, onion, garlic), and confidence must be from 0 to 1."
     )
 
     content = ""
@@ -324,9 +330,11 @@ async def detect_ingredients_from_image(file: UploadFile) -> tuple[list[str], st
                             {
                                 "type": "text",
                                 "text": (
-                                    "Identify ingredients in this image for recipe generation. "
-                                    "If this is a cooked dish, infer likely core ingredients conservatively. "
-                                    "Return 5-20 ingredients with confidence in strict JSON only."
+                                    "Does this image contain visible cooking ingredients? "
+                                    "If yes, list the ingredients you can see. "
+                                    "If not, set contains_ingredients=false and return an empty ingredients list. "
+                                    "Do NOT guess ingredients from unrelated photos. "
+                                    "Return strict JSON only."
                                 ),
                             },
                             {
@@ -375,9 +383,12 @@ async def detect_ingredients_from_image(file: UploadFile) -> tuple[list[str], st
         raise HTTPException(status_code=502, detail=detail)
 
     detected_ingredients: list[str] = []
+    contains_ingredients: bool | None = None
 
     try:
         parsed = json.loads(strip_markdown_fences(content))
+        if isinstance(parsed, dict) and isinstance(parsed.get("contains_ingredients"), bool):
+            contains_ingredients = parsed["contains_ingredients"]
         if isinstance(parsed, dict) and isinstance(parsed.get("ingredients"), list):
             for item in parsed["ingredients"]:
                 if isinstance(item, dict):
@@ -394,16 +405,23 @@ async def detect_ingredients_from_image(file: UploadFile) -> tuple[list[str], st
     except json.JSONDecodeError:
         detected_ingredients = []
 
+    if contains_ingredients is False:
+        raise HTTPException(
+            status_code=400,
+            detail="No ingredients detected in the image. Please upload a photo of ingredients (e.g., produce, spices, pantry items).",
+        )
+
     if not detected_ingredients:
         detected_ingredients = extract_ingredients_list(content)
 
     detected_ingredients = postprocess_detected_ingredients(detected_ingredients)
     detected_ingredients = await refine_detected_ingredients_with_groq(detected_ingredients)
 
-    if not detected_ingredients:
+    # Final guardrails: require at least a couple plausible ingredients before continuing.
+    if len(detected_ingredients) < 2:
         raise HTTPException(
-            status_code=502,
-            detail="Could not detect ingredients from image. Try a clearer photo.",
+            status_code=400,
+            detail="Could not confidently detect ingredients from the image. Try a clearer ingredient photo (good lighting, items in frame).",
         )
 
     return detected_ingredients, chosen_model

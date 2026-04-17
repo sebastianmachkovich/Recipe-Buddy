@@ -1,2 +1,10 @@
 .vscode
 pyrightconfig.json
+
+# Local dev artifacts
+backend-dev.log
+frontend-dev.log
+
+# Python virtual environments (repo-root or nested)
+.venv/
+backend/.venv/
