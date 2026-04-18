@@ -374,11 +374,15 @@ export const updateRecipeMutation = mutationOptions({
     toast.success("Recipe updated");
   },
   onError(error, variables, onMutateResult, context) {
-    context.client.setQueryData(["recipes", variables.id], onMutateResult?.prevRecipe);
+    context.client.setQueryData(
+      ["recipes", variables.id],
+      onMutateResult?.prevRecipe,
+    );
     toast.error("Failed to update recipe", { description: error.message });
   },
   onSettled(data, error, variables, onMutateResult, context) {
     context.client.invalidateQueries({ queryKey: ["recipes", variables.id] });
+    context.client.invalidateQueries({ queryKey: ["recipeIds"] });
   },
 });
 
