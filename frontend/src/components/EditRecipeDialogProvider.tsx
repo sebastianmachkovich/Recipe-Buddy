@@ -9,8 +9,8 @@ import {
 import { Button } from "./ui/button";
 import { type Recipe } from "@/services/api";
 import { useState } from "react";
-import ErrableTextInputField from "./ErrableTextInputField";
-import UnparsedTextInputFieldList from "./UnparsedTextInputFieldList";
+import { ErrableTextInputField } from "./ErrableTextInputField";
+import { UnparsedTextInputFieldList } from "./UnparsedTextInputFieldList";
 import { ReorderableInputField } from "./ReorderableInput";
 import { deepCopyRecipe } from "@/lib/utils";
 import { DeleteRecipeButton } from "./DeleteRecipeButton";
@@ -23,7 +23,7 @@ import {
   useUploadImage,
 } from "@/hooks/queries";
 
-export default function EditRecipeDialogProvider({
+export function EditRecipeDialogProvider({
   children,
   recipeId,
 }: {

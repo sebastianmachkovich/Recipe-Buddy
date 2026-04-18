@@ -3,8 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Dispatch, SetStateAction, useState } from "react";
 
 // Creates a text input or textarea field with an error message that can be
-// displated if validation fails.
-export default function ErrableTextInputField({
+// displayed if validation fails.
+export function UnparsedTextInputFieldList({
   placeholder,
   listItemPlaceholder,
   items,

@@ -12,12 +12,12 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "./ui/button";
 import { X } from "lucide-react";
-import EditRecipeDialogProvider from "./EditRecipeDialogProvider";
+import { EditRecipeDialogProvider } from "./EditRecipeDialogProvider";
 import { usePlanIds, useRecipe, useRemoveFromPlan } from "@/hooks/queries";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
-export default function PlanSidebar() {
+export function PlanSidebar() {
   const isAuthPage = useRouterState({
     select: (state) => state.location.pathname === "/",
   });

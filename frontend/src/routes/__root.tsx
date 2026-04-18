@@ -1,7 +1,7 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarInset } from "@/components/ui/sidebar";
-import PlanSidebar from "@/components/PlanSidebar";
+import { PlanSidebar } from "@/components/PlanSidebar";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 

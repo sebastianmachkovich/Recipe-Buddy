@@ -7,7 +7,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import EditRecipeDialogProvider from "@/components/EditRecipeDialogProvider";
+import { EditRecipeDialogProvider } from "@/components/EditRecipeDialogProvider";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
 import {
   useAddToPlan,

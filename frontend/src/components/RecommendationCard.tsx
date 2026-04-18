@@ -3,10 +3,10 @@ import { Card, CardDescription, CardTitle } from "./ui/card";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
 import { RecipeCardFooter } from "@/components/RecipeCard";
 import { useRecipe } from "@/hooks/queries";
-import EditRecipeDialogProvider from "./EditRecipeDialogProvider";
+import { EditRecipeDialogProvider } from "./EditRecipeDialogProvider";
 import { Skeleton } from "./ui/skeleton";
 
-export default function RecommendationCard({
+export function RecommendationCard({
   recipeId,
   orientation,
 }: {

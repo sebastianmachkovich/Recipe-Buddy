@@ -4,7 +4,7 @@ import { Textarea } from "./ui/textarea";
 
 // Creates a text input or textarea field with an error message that can be
 // displayed if validation fails.
-export default function ErrableTextInputField({
+export function ErrableTextInputField({
   kind,
   id,
   description,
