@@ -7,21 +7,25 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { type Recipe } from "@/services/api";
+import { RecipeIngredient, RecipeStep } from "@/services/api";
 import { useState } from "react";
 import { ErrableTextInputField } from "./ErrableTextInputField";
 import { UnparsedTextInputFieldList } from "./UnparsedTextInputFieldList";
 import { ReorderableInputField } from "./ReorderableInput";
-import { deepCopyRecipe } from "@/lib/utils";
 import { DeleteRecipeButton } from "./DeleteRecipeButton";
 import { UploadImageHeader } from "./UploadImageHeader";
-import {
-  useAddRecipe,
-  useRecipe,
-  useRecipeIds,
-  useUpdateRecipe,
-  useUploadImage,
-} from "@/hooks/queries";
+import { useAddRecipe, useRecipe, useUpdateRecipe } from "@/hooks/queries";
+import { atom, useAtom, useSetAtom } from "jotai";
+
+export const editRecipeContext = {
+  name: atom(""),
+  description: atom(""),
+  imgUrl: atom(undefined as string | undefined),
+  ingredients: atom([] as RecipeIngredient[]),
+  steps: atom([] as RecipeStep[]),
+  newIngredients: atom([] as string[]),
+  newSteps: atom([] as string[]),
+};
 
 export function EditRecipeDialogProvider({
   children,
@@ -31,59 +35,50 @@ export function EditRecipeDialogProvider({
   recipeId?: number;
 }) {
   const { data: recipe } = useRecipe(recipeId);
-  const { data: recipeIds } = useRecipeIds();
   const { mutate: addRecipe } = useAddRecipe();
   const { mutate: updateRecipe } = useUpdateRecipe();
-  const { mutate: uploadImage } = useUploadImage();
+
+  const [name, setName] = useAtom(editRecipeContext.name);
+  const [description, setDescription] = useAtom(editRecipeContext.description);
+  const [imgUrl, setImgUrl] = useAtom(editRecipeContext.imgUrl);
+  const [ingredients, setIngredients] = useAtom(editRecipeContext.ingredients);
+  const [steps, setSteps] = useAtom(editRecipeContext.steps);
+  const setNewIngredients = useSetAtom(editRecipeContext.newIngredients);
+  const setNewSteps = useSetAtom(editRecipeContext.newSteps);
 
   // Observes whether the dialog is open.  Needed because we use a <DialogTrigger>
   // to open the it, rather than a prop.
   const [open, setOpen] = useState(false);
 
-  // A copy of the recipe that gets edited in the dialog.  Overwrites the
-  // original recipe when the dialog is closed with the submit button.  It is
-  // null when the "Add Recipe" button opens the dialog.
-  const [editedRecipe, setEditedRecipe] = useState<Recipe | null>(null);
-
-  // Unparsed ingredients and steps.
-  const [newIngredients, setNewIngredients] = useState<string[]>([]);
-  const [newSteps, setNewSteps] = useState<string[]>([]);
-
   // Error states for the form fields.
   const [nameError, setNameError] = useState(false);
   const [descriptionError, setDescriptionError] = useState(false);
-
-  // Image selected in the dialog to upload to the backend on submit.
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   // Opens the dialog if the trigger is clicked.
   function handleOpenChange(newOpen: boolean) {
     if (newOpen) {
       // Resets all state local to the component.
-      const ids = recipeIds || [];
-      const newId = ids.length > 0 ? Math.max(...ids) + 1 : 1;
-      setEditedRecipe(deepCopyRecipe(recipe, newId));
+      setName(recipe?.name ?? "");
+      setDescription(recipe?.description ?? "");
+      setImgUrl(recipe?.imgUrl ?? undefined);
+      setSteps(recipe?.steps ?? []);
+      setIngredients(recipe?.ingredients ?? []);
       setNameError(false);
       setDescriptionError(false);
       setNewIngredients([]);
       setNewSteps([]);
-      setImageFile(null);
-      setImagePreviewUrl(null);
     }
     setOpen(newOpen);
   }
 
   async function handleSubmit() {
-    if (!editedRecipe) return;
-
     // Does basic input validation.
     let hasErrors = false;
-    if (!editedRecipe.name) {
+    if (!editRecipeContext.name) {
       setNameError(true);
       hasErrors = true;
     }
-    if (!editedRecipe.description) {
+    if (!editRecipeContext.description) {
       setDescriptionError(true);
       hasErrors = true;
     }
@@ -98,16 +93,23 @@ export function EditRecipeDialogProvider({
     // Updates the recipe in the list if it exists, or creates a new one and
     // appends it to the list.
     if (recipe) {
-      updateRecipe(editedRecipe);
+      updateRecipe({
+        id: recipe.id,
+        rating: recipe.rating,
+        name,
+        description,
+        ingredients,
+        steps,
+        imgUrl,
+      });
     } else {
-      addRecipe(editedRecipe, {
-        onSuccess(data) {
-          if (imageFile) {
-            // FIXME: This should not be a separate request!  It should be part of
-            //        `updateRecipe` and `addRecipe`.
-            uploadImage({ recipeId: data.data.id, file: imageFile });
-          }
-        },
+      addRecipe({
+        rating: 0,
+        name,
+        description,
+        ingredients,
+        steps,
+        imgUrl,
       });
     }
 
@@ -118,27 +120,18 @@ export function EditRecipeDialogProvider({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      {open && editedRecipe && (
+      {open && (
         <DialogContent className="max-h-[calc(100vh-2rem)] grid-rows-[auto_1fr_auto]">
           <DialogDescription className="hidden">Edit Recipe</DialogDescription>
-          <UploadImageHeader
-            editedRecipe={editedRecipe}
-            imagePreviewUrl={imagePreviewUrl}
-            setImagePreviewUrl={setImagePreviewUrl}
-            setImageFile={setImageFile}
-          />
+          <UploadImageHeader />
           <div className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden min-h-0 px-3">
             <ErrableTextInputField
               kind="input"
               id="edit-recipe-name"
               description="Name"
               placeholder="Something Delicious"
-              value={editedRecipe.name}
-              onChange={(e) =>
-                setEditedRecipe((prev) =>
-                  prev ? { ...prev, name: e.target.value } : prev,
-                )
-              }
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               hasError={nameError}
               errorMsg="Name Required"
             />
@@ -147,47 +140,26 @@ export function EditRecipeDialogProvider({
               id="edit-recipe-description"
               description="Description"
               placeholder="Its flavor was good, but it calls for too much lemon."
-              value={editedRecipe.description ?? ""}
-              onChange={(e) =>
-                setEditedRecipe((prev) =>
-                  prev ? { ...prev, description: e.target.value } : prev,
-                )
-              }
+              value={description ?? ""}
+              onChange={(e) => setDescription(e.target.value)}
               hasError={descriptionError}
               errorMsg="Description Required"
             />
-            <ReorderableInputField
-              label="Ingredients"
-              editedRecipe={editedRecipe}
-              setEditedRecipe={setEditedRecipe}
-              arrKey="ingredients"
-            />
+            <ReorderableInputField type="ingredients" />
             <UnparsedTextInputFieldList
               placeholder="Secret Sauce..."
               listItemPlaceholder="Ingredient"
-              items={newIngredients}
-              setItems={setNewIngredients}
+              listAtom={editRecipeContext.newIngredients}
             />
-            <ReorderableInputField
-              label="Steps"
-              editedRecipe={editedRecipe}
-              setEditedRecipe={setEditedRecipe}
-              arrKey="steps"
-            />
+            <ReorderableInputField type="steps" />
             <UnparsedTextInputFieldList
               placeholder="Bake until done."
               listItemPlaceholder="Step"
-              items={newSteps}
-              setItems={setNewSteps}
+              listAtom={editRecipeContext.newSteps}
             />
           </div>
           <DialogFooter className="pt-6">
-            {recipe && (
-              <DeleteRecipeButton
-                editedRecipe={editedRecipe}
-                setOpen={setOpen}
-              />
-            )}
+            {recipe && <DeleteRecipeButton id={recipe.id} setOpen={setOpen} />}
             <DialogClose asChild>
               <Button variant="outline" size="sm">
                 Cancel

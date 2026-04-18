@@ -1,20 +1,20 @@
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Dispatch, SetStateAction, useState } from "react";
+import { PrimitiveAtom, useAtom } from "jotai";
+import { useState } from "react";
 
 // Creates a text input or textarea field with an error message that can be
 // displayed if validation fails.
 export function UnparsedTextInputFieldList({
   placeholder,
   listItemPlaceholder,
-  items,
-  setItems,
+  listAtom,
 }: {
   placeholder?: string;
   listItemPlaceholder?: string;
-  items: string[];
-  setItems: Dispatch<SetStateAction<string[]>>;
+  listAtom: PrimitiveAtom<string[]>;
 }) {
+  const [items, setItems] = useAtom(listAtom);
   const [value, setValue] = useState("");
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

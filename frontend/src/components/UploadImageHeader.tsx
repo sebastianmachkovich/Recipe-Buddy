@@ -1,20 +1,13 @@
-import { Recipe } from "@/services/api";
-import { Dispatch, SetStateAction, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { DialogHeader, DialogTitle } from "./ui/dialog";
 import { VisuallyHidden } from "radix-ui";
 import { UploadIcon } from "lucide-react";
+import { useAtom } from "jotai";
+import { editRecipeContext as erc } from "./EditRecipeDialogProvider";
 
-export function UploadImageHeader({
-  editedRecipe,
-  imagePreviewUrl,
-  setImagePreviewUrl,
-  setImageFile,
-}: {
-  editedRecipe: Recipe;
-  imagePreviewUrl: string | null;
-  setImagePreviewUrl: Dispatch<SetStateAction<string | null>>;
-  setImageFile: Dispatch<SetStateAction<File | null>>;
-}) {
+export function UploadImageHeader() {
+  const [imgUrl, setImgUrl] = useAtom(erc.imgUrl);
+
   // Observes whether the image is hovered over. Needed so  we know whether to
   // show the upload overlay.
   const [isImageHovered, setIsImageHovered] = useState(false);
@@ -31,12 +24,12 @@ export function UploadImageHeader({
     const validTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!validTypes.includes(file.type)) return;
 
-    const blobUrl = URL.createObjectURL(file);
-    setImageFile(file);
-    setImagePreviewUrl(blobUrl);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImgUrl(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
   }
-
-  const displayImageUrl = imagePreviewUrl || editedRecipe.imgUrl;
 
   return (
     <>
@@ -51,7 +44,7 @@ export function UploadImageHeader({
         <VisuallyHidden.Root asChild>
           <DialogTitle>Edit Recipe</DialogTitle>
         </VisuallyHidden.Root>
-        {displayImageUrl ? (
+        {imgUrl ? (
           <div
             className="group relative aspect-4/3 w-[calc(100%+3rem)] max-w-none
                        -mx-6 -mt-6 mb-4 rounded-t-lg
@@ -60,7 +53,7 @@ export function UploadImageHeader({
                        cursor-pointer overflow-hidden
                        bg-cover bg-center"
             style={{
-              backgroundImage: `url(${displayImageUrl})`,
+              backgroundImage: `url(${imgUrl})`,
             }}
             onMouseEnter={() => setIsImageHovered(true)}
             onMouseLeave={() => setIsImageHovered(false)}

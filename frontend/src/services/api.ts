@@ -154,7 +154,7 @@ export interface AuthStatusResponse {
   user: AuthUser | null;
 }
 
-export type RecipeWritePayload = Omit<Recipe, "id" | "imgUrl">;
+export type RecipeWritePayload = Omit<Recipe, "id">;
 
 // // Ingredient API
 // export const ingredientsAPI = {
@@ -279,7 +279,7 @@ export const allRecipesQuery = queryOptions({
 });
 
 export const addRecipeMutation = mutationOptions({
-  mutationFn: ({ id, imgUrl, ...rest }: Recipe) =>
+  mutationFn: ({ imgUrl, ...rest }: RecipeWritePayload) =>
     api.post<Recipe>("/recipes/", rest),
   onMutate(value, context) {
     context.client.setQueryData(["recipes", value.id], value);

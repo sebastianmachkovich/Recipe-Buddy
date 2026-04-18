@@ -1,5 +1,3 @@
-import { Recipe } from "@/services/api";
-import { Dispatch, SetStateAction } from "react";
 import {
   Dialog,
   DialogClose,
@@ -13,18 +11,23 @@ import {
 import { Button } from "./ui/button";
 import { Trash } from "lucide-react";
 import { useRemoveRecipe } from "@/hooks/queries";
+import { editRecipeContext as erc } from "./EditRecipeDialogProvider";
+import { useAtomValue } from "jotai";
+import { Dispatch, SetStateAction } from "react";
 
 export function DeleteRecipeButton({
-  editedRecipe,
+  id,
   setOpen,
 }: {
-  editedRecipe: Recipe;
+  id: number;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) {
+  const name = useAtomValue(erc.name);
   const { mutate: removeRecipe } = useRemoveRecipe();
+
   // Deletes the recipe from the list and closes the dialog.
   function handleDeleteRecipe() {
-    removeRecipe(editedRecipe.id);
+    removeRecipe(id);
     setOpen(false);
   }
 
@@ -38,7 +41,7 @@ export function DeleteRecipeButton({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
-            Delete {editedRecipe.name}?
+            Delete {name}?
           </DialogTitle>
           <DialogDescription>
             Are you sure you want to delete this recipe?

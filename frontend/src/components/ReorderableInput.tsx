@@ -1,9 +1,4 @@
-import {
-  IngredientUnit,
-  RecipeIngredient,
-  Recipe,
-  RecipeStep,
-} from "@/services/api";
+import { IngredientUnit, RecipeIngredient, RecipeStep } from "@/services/api";
 import {
   Select,
   SelectContent,
@@ -20,7 +15,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { GripVerticalIcon, X } from "lucide-react";
-import { Dispatch, SetStateAction } from "react";
 import { CSS } from "@dnd-kit/utilities";
 import {
   restrictToVerticalAxis,
@@ -35,6 +29,8 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { Field, FieldLabel } from "./ui/field";
+import { editRecipeContext as erc } from "./EditRecipeDialogProvider";
+import { useAtom } from "jotai";
 
 function ReorderableInput({
   payload,
@@ -159,29 +155,18 @@ function StepEditInput({
   );
 }
 
-export function ReorderableInputField({
-  label,
-  editedRecipe,
-  setEditedRecipe,
-  arrKey,
+export function ReorderableInputField<T extends "ingredients" | "steps">({
+  type,
 }: {
-  label: string;
-  editedRecipe: Recipe;
-  setEditedRecipe: Dispatch<SetStateAction<Recipe | null>>;
-  arrKey: "ingredients" | "steps";
+  type: T;
 }) {
-  // Aliases that resolve the type of the input component based on the array key.
-  type Which = typeof arrKey extends "steps" ? RecipeStep : RecipeIngredient;
-  type WhichInput = typeof arrKey extends "steps"
-    ? typeof StepEditInput
-    : typeof IngredientEditInput;
-
-  // Maps the array key to the correct component type.
   const InputComponents = {
     ingredients: IngredientEditInput,
     steps: StepEditInput,
   } as const;
-  const Component = InputComponents[arrKey] as WhichInput;
+  const Component = InputComponents[type];
+  const isStep = type === "steps";
+  const [items, setItems] = useAtom(isStep ? erc.steps : erc.ingredients);
 
   // Sensors for dragging the ingredient and step lists.
   const sensors = useSensors(useSensor(PointerSensor));
@@ -192,44 +177,27 @@ export function ReorderableInputField({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      setEditedRecipe((prev) => {
-        if (!prev) return prev;
-        const oldIndex = prev[arrKey].findIndex((it) => it.id === active.id);
-        const newIndex = prev[arrKey].findIndex((it) => it.id === over.id);
-        return {
-          ...prev,
-          [arrKey]: arrayMove(prev[arrKey] as Which[], oldIndex, newIndex),
-        };
+      setItems((prev) => {
+        const oldIndex = prev.findIndex((it) => it.id === active.id);
+        const newIndex = prev.findIndex((it) => it.id === over.id);
+        return arrayMove(prev, oldIndex, newIndex);
       });
     }
   }
 
   // Deletes an ingredient or step from their respective list.
   function handleDelete(id: number) {
-    setEditedRecipe((prev) =>
-      prev
-        ? { ...prev, [arrKey]: prev[arrKey].filter((it) => it.id !== id) }
-        : prev,
-    );
+    setItems((prev) => prev.filter((it) => it.id !== id));
   }
 
   // Updates an ingredient or step in their respective list.
-  function handleUpdate(updated: RecipeIngredient | RecipeStep) {
-    setEditedRecipe((prev) =>
-      prev
-        ? {
-            ...prev,
-            [arrKey]: prev[arrKey].map((it) =>
-              it.id === updated.id ? updated : it,
-            ),
-          }
-        : prev,
-    );
+  function handleUpdate(updated: T) {
+    setItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)));
   }
 
   return (
     <Field>
-      <FieldLabel>{label}</FieldLabel>
+      <FieldLabel>{isStep ? "Steps" : "Ingredients"}</FieldLabel>
       <div className="flex flex-col gap-3">
         <DndContext
           sensors={sensors}
@@ -238,13 +206,13 @@ export function ReorderableInputField({
           modifiers={[restrictToVerticalAxis, restrictToParentElement]}
         >
           <SortableContext
-            items={editedRecipe[arrKey].map((it) => it.id)}
+            items={items.map((it) => it.id)}
             strategy={verticalListSortingStrategy}
           >
-            {editedRecipe[arrKey].map((it) => (
+            {items.map((it) => (
               <Component
                 key={it.id}
-                item={it as Which}
+                item={it}
                 onDelete={() => handleDelete(it.id)}
                 onChange={handleUpdate}
               />
