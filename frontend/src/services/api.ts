@@ -2,7 +2,11 @@
 
 import axios from "axios";
 import { router } from "@/main";
-import { mutationOptions, QueryClient, queryOptions} from "@tanstack/react-query";
+import {
+  mutationOptions,
+  QueryClient,
+  queryOptions,
+} from "@tanstack/react-query";
 import { redirect, UseNavigateResult } from "@tanstack/react-router";
 import { toast } from "sonner";
 
@@ -27,13 +31,16 @@ const api = axios.create({
   },
 });
 
-api.interceptors.response.use(response => response, async error => {
-  if (error.response.status === 401) {
-    qc.clear();
-    await router.navigate({ to: "/" });
-  }
-  return Promise.reject(error);
-});
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response.status === 401) {
+      qc.clear();
+      await router.navigate({ to: "/" });
+    }
+    return Promise.reject(error);
+  },
+);
 
 export interface Ingredient {
   id: number;
@@ -196,7 +203,10 @@ export const loginMutation = mutationOptions({
     return response.data;
   },
   async onSuccess(user, variables, onMutateResult, context) {
-    sessionStorage.setItem("authExpiresAt", String(Date.now() + 24 * 60 * 60 * 1000));
+    sessionStorage.setItem(
+      "authExpiresAt",
+      String(Date.now() + 24 * 60 * 60 * 1000),
+    );
     context.client.setQueryData(["currentUser"], user);
     await context.client.invalidateQueries({ queryKey: ["planIds"] });
     await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
@@ -213,7 +223,10 @@ export const signupMutation = mutationOptions({
     return response.data;
   },
   async onSuccess(user, variables, onMutateResult, context) {
-    sessionStorage.setItem("authExpiresAt", String(Date.now() + 24 * 60 * 60 * 1000));
+    sessionStorage.setItem(
+      "authExpiresAt",
+      String(Date.now() + 24 * 60 * 60 * 1000),
+    );
     context.client.setQueryData(["currentUser"], user);
     await context.client.invalidateQueries({ queryKey: ["planIds"] });
     await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
@@ -236,22 +249,26 @@ export const logoutMutation = mutationOptions({
     context.client.removeQueries({ queryKey: ["feedIds"] });
   },
   async onError(error, variables, onMutateResult, context) {
-      // TODO: Notify user.
+    // TODO: Notify user.
   },
 });
 
-export const recipeQuery = (id: number) => queryOptions({
-  queryKey: ["recipes", id],
-  async queryFn() {
-    const response = await api.get<Recipe>(`/recipes/${id}`);
-    const imageResponse = await api.get<Blob>(`${API_URL}/recipes/${id}/image`, { responseType: "blob" });
-    return {
-      ...response.data,
-      imgUrl: URL.createObjectURL(imageResponse.data),
-    };
-  },
-  enabled: !!id,
-});
+export const recipeQuery = (id: number) =>
+  queryOptions({
+    queryKey: ["recipes", id],
+    async queryFn() {
+      const response = await api.get<Recipe>(`/recipes/${id}`);
+      const imageResponse = await api.get<Blob>(
+        `${API_URL}/recipes/${id}/image`,
+        { responseType: "blob" },
+      );
+      return {
+        ...response.data,
+        imgUrl: URL.createObjectURL(imageResponse.data),
+      };
+    },
+    enabled: !!id,
+  });
 
 export const allRecipesQuery = queryOptions({
   queryKey: ["recipes"],
@@ -262,12 +279,21 @@ export const allRecipesQuery = queryOptions({
 });
 
 export const addRecipeMutation = mutationOptions({
-  mutationFn: ({ id, imgUrl, ...rest }: Recipe) => api.post<Recipe>("/recipes/", rest),
+  mutationFn: ({ id, imgUrl, ...rest }: Recipe) =>
+    api.post<Recipe>("/recipes/", rest),
   onMutate(value, context) {
     context.client.setQueryData(["recipes", value.id], value);
-    context.client.setQueryData<number[]>(["recipeIds"], (ids) => [...(ids || []), value.id]);
-    context.client.setQueryData<number[]>(["planIds"], (ids) => [...(ids || []), value.id]);
-    return { prevRecipeIds: context.client.getQueryData<number[]>(["recipeIds"]) };
+    context.client.setQueryData<number[]>(["recipeIds"], (ids) => [
+      ...(ids || []),
+      value.id,
+    ]);
+    context.client.setQueryData<number[]>(["planIds"], (ids) => [
+      ...(ids || []),
+      value.id,
+    ]);
+    return {
+      prevRecipeIds: context.client.getQueryData<number[]>(["recipeIds"]),
+    };
   },
   onSuccess(data, variables, onMutateResult, context) {
     // Clean up the temp-ID cache entry
@@ -275,7 +301,10 @@ export const addRecipeMutation = mutationOptions({
   },
   onError(error, variables, onMutateResult, context) {
     context.client.removeQueries({ queryKey: ["recipes", variables.id] });
-    context.client.setQueryData<number[]>(["recipeIds"], onMutateResult?.prevRecipeIds);
+    context.client.setQueryData<number[]>(
+      ["recipeIds"],
+      onMutateResult?.prevRecipeIds,
+    );
     toast.error("Failed to create recipe", { description: error.message });
   },
   onSettled(data, error, variables, onMutateResult, context) {
@@ -289,8 +318,8 @@ export const addRecipeMutation = mutationOptions({
 
 export const removeRecipeMutation = mutationOptions({
   async mutationFn(id: number) {
-      await api.delete(`/recipes/${id}`);
-      return id;
+    await api.delete(`/recipes/${id}`);
+    return id;
   },
   async onMutate(id, context) {
     context.client.cancelQueries({ queryKey: ["recipes", id] });
@@ -300,18 +329,26 @@ export const removeRecipeMutation = mutationOptions({
     const prevRecipeIds = context.client.getQueryData<number[]>(["recipeIds"]);
     const prevPlanIds = context.client.getQueryData<number[]>(["planIds"]);
     context.client.setQueryData(["recipes", id], undefined);
-    context.client.setQueryData<number[]>(["recipeIds"], (ids: number[] | undefined) =>
-        ids?.filter((it) => it !== id)
+    context.client.setQueryData<number[]>(
+      ["recipeIds"],
+      (ids: number[] | undefined) => ids?.filter((it) => it !== id),
     );
-    context.client.setQueryData<number[]>(["planIds"], (ids: number[] | undefined) =>
-        ids?.filter((it) => it !== id)
+    context.client.setQueryData<number[]>(
+      ["planIds"],
+      (ids: number[] | undefined) => ids?.filter((it) => it !== id),
     );
     return { prevRecipe, prevRecipeIds, prevPlanIds };
   },
   onError(error, id, onMutateResult, context) {
     context.client.setQueryData(["recipes", id], onMutateResult?.prevRecipe);
-    context.client.setQueryData<number[]>(["recipeIds"], onMutateResult?.prevRecipeIds);
-    context.client.setQueryData<number[]>(["planIds"], onMutateResult?.prevPlanIds);
+    context.client.setQueryData<number[]>(
+      ["recipeIds"],
+      onMutateResult?.prevRecipeIds,
+    );
+    context.client.setQueryData<number[]>(
+      ["planIds"],
+      onMutateResult?.prevPlanIds,
+    );
     // TODO: Notify user.
   },
   async onSettled(data, error, id, onMutateResult, context) {
@@ -322,10 +359,14 @@ export const removeRecipeMutation = mutationOptions({
 });
 
 export const updateRecipeMutation = mutationOptions({
-  mutationFn: ({ id, imgUrl, ...rest }: Recipe) => api.put<Recipe>(`/recipes/${id}`, rest),
+  mutationFn: ({ id, imgUrl, ...rest }: Recipe) =>
+    api.put<Recipe>(`/recipes/${id}`, rest),
   async onMutate(value, context) {
     await context.client.cancelQueries({ queryKey: ["recipes", value.id] });
-    const prevRecipe = context.client.getQueryData<Recipe>(["recipes", value.id]);
+    const prevRecipe = context.client.getQueryData<Recipe>([
+      "recipes",
+      value.id,
+    ]);
     context.client.setQueryData(["recipes", value.id], value);
     return { prevRecipe };
   },
@@ -347,35 +388,33 @@ export const recipeIdsQuery = queryOptions({
     const response = await api.get<Recipe[]>("/recipes/");
     return response.data
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((recipe) => recipe.id)
+      .map((recipe) => recipe.id);
   },
 });
 
-export const planIdsQuery = (isAuthPage: boolean) => queryOptions({
-  queryKey: ["planIds"],
-  async queryFn() {
-    if (isAuthPage) return [];
-    const response = await api.get<number[]>("/plan/");
-    return response.data;
-  },
-});
+export const planIdsQuery = (isAuthPage: boolean) =>
+  queryOptions({
+    queryKey: ["planIds"],
+    async queryFn() {
+      if (isAuthPage) return [];
+      const response = await api.get<number[]>("/plan/");
+      return response.data;
+    },
+  });
 
 export const addToPlanMutation = mutationOptions({
   mutationFn: (id: number) => api.post<{ recipe_id: number }>(`/plan/${id}`),
   async onMutate(value, context) {
     await context.client.cancelQueries({ queryKey: ["planIds"] });
     const prev = context.client.getQueryData<number[]>(["planIds"]);
-    context.client.setQueryData<number[]>(
-      ["planIds"],
-      (ids) => [...(ids || []), value]
-    );
+    context.client.setQueryData<number[]>(["planIds"], (ids) => [
+      ...(ids || []),
+      value,
+    ]);
     return { prev };
   },
   onError(error, value, onMutateResult, context) {
-    context.client.setQueryData<number[]>(
-      ["planIds"],
-      onMutateResult?.prev
-    );
+    context.client.setQueryData<number[]>(["planIds"], onMutateResult?.prev);
     // TODO: Notify user.
   },
   async onSettled(data, error, variables, onMutateResult, context) {
@@ -388,17 +427,13 @@ export const removeFromPlanMutation = mutationOptions({
   async onMutate(value, context) {
     await context.client.cancelQueries({ queryKey: ["planIds"] });
     const prev = context.client.getQueryData<number[]>(["planIds"]);
-    context.client.setQueryData<number[]>(
-      ["planIds"],
-      (ids) => ids?.filter((it) => it !== value)
+    context.client.setQueryData<number[]>(["planIds"], (ids) =>
+      ids?.filter((it) => it !== value),
     );
     return { prev };
   },
   onError(error, value, onMutateResult, context) {
-    context.client.setQueryData<number[]>(
-      ["planIds"],
-      onMutateResult?.prev
-    );
+    context.client.setQueryData<number[]>(["planIds"], onMutateResult?.prev);
     // TODO: Notify user.
   },
   async onSettled(data, error, variables, onMutateResult, context) {
@@ -422,19 +457,31 @@ export const uploadImageMutation = mutationOptions({
     });
   },
   async onMutate(variables, context) {
-    await context.client.cancelQueries({ queryKey: ["recipes", variables.recipeId] });
-    const prevRecipe = context.client.getQueryData<number>(["recipes", variables.recipeId]);
-    context.client.setQueryData(["recipes", variables.recipeId], (prev: Recipe | undefined) =>
-      prev ? { ...prev, imgUrl: URL.createObjectURL(variables.file) } : prev,
+    await context.client.cancelQueries({
+      queryKey: ["recipes", variables.recipeId],
+    });
+    const prevRecipe = context.client.getQueryData<number>([
+      "recipes",
+      variables.recipeId,
+    ]);
+    context.client.setQueryData(
+      ["recipes", variables.recipeId],
+      (prev: Recipe | undefined) =>
+        prev ? { ...prev, imgUrl: URL.createObjectURL(variables.file) } : prev,
     );
     return { prevRecipe };
   },
   onError(error, variables, onMutateResult, context) {
-    context.client.setQueryData(["recipes", variables.recipeId], onMutateResult?.prevRecipe);
+    context.client.setQueryData(
+      ["recipes", variables.recipeId],
+      onMutateResult?.prevRecipe,
+    );
     // TODO: Notify user.
   },
   async onSettled(data, error, variables, onMutateResult, context) {
-    await context.client.invalidateQueries({ queryKey: ["recipes", variables.recipeId] });
+    await context.client.invalidateQueries({
+      queryKey: ["recipes", variables.recipeId],
+    });
   },
 });
 
@@ -446,7 +493,9 @@ export const aiRecipesQuery = queryOptions<AIResponseData>({
     detected_ingredients: [],
     activeModelLabel: "",
   },
-    async queryFn() { return qc.getQueryData(["aiRecipes"])!; },
+  async queryFn() {
+    return qc.getQueryData(["aiRecipes"])!;
+  },
 });
 
 export const generateAIRecipesMutation = mutationOptions({
@@ -454,18 +503,18 @@ export const generateAIRecipesMutation = mutationOptions({
   async mutationFn(input: string | File): Promise<AIResponseData> {
     if (typeof input === "string") {
       const ingredientList = input
-          .split(/,|\n/g)
-          .map((item) => item.trim())
-          .filter(Boolean);
+        .split(/,|\n/g)
+        .map((item) => item.trim())
+        .filter(Boolean);
       const response = await api.post<AIRecipeResponse>("/api/ai/recipes", {
         ingredients: ingredientList,
         max_recipes: 5,
       });
-      return ({
+      return {
         detected_ingredients: [],
         activeModelLabel: response.data.model,
         recipes: response.data.recipes,
-      });
+      };
     } else {
       const formData = new FormData();
       formData.append("image", input);
@@ -478,13 +527,13 @@ export const generateAIRecipesMutation = mutationOptions({
           headers: {
             "Content-Type": "multipart/form-data",
           },
-        }
+        },
       );
-      return ({
+      return {
         detected_ingredients: response.data.detected_ingredients,
         activeModelLabel: `${response.data.vision_model} → ${response.data.recipe_model}`,
         recipes: response.data.recipes,
-      });
+      };
     }
   },
   onMutate(input, context) {
@@ -499,6 +548,6 @@ export const generateAIRecipesMutation = mutationOptions({
     toast.error("Failed to generate recipes", { description: error.message });
   },
   onSuccess(data, variables, onMutateResult, context) {
-      context.client.setQueryData<AIResponseData>(["aiRecipes"], data);
+    context.client.setQueryData<AIResponseData>(["aiRecipes"], data);
   },
 });
