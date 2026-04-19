@@ -48,7 +48,7 @@ pip install -r requirements.txt
 Add this in `backend/.env`:
 
 ```env
-GROQ_API_KEY= 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
+GROQ_API_KEY=your_groq_api_key_here
 GROQ_MODEL=llama-3.1-8b-instant
 ```
 
