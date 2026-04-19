@@ -258,14 +258,7 @@ export const recipeQuery = (id: number) =>
     queryKey: ["recipes", id],
     async queryFn() {
       const response = await api.get<Recipe>(`/recipes/${id}`);
-      const imageResponse = await api.get<Blob>(
-        `${API_URL}/recipes/${id}/image`,
-        { responseType: "blob" },
-      );
-      return {
-        ...response.data,
-        imgUrl: URL.createObjectURL(imageResponse.data),
-      };
+      return { ...response.data };
     },
     enabled: !!id,
   });
@@ -279,8 +272,8 @@ export const allRecipesQuery = queryOptions({
 });
 
 export const addRecipeMutation = mutationOptions({
-  mutationFn: ({ imgUrl, ...rest }: RecipeWritePayload) =>
-    api.post<Recipe>("/recipes/", rest),
+  mutationFn: ({ id, ...rest }: Recipe) =>
+    api.post<RecipeWritePayload>("/recipes/", rest),
   onMutate(value, context) {
     context.client.setQueryData(["recipes", value.id], value);
     context.client.setQueryData<number[]>(["recipeIds"], (ids) => [
@@ -359,7 +352,7 @@ export const removeRecipeMutation = mutationOptions({
 });
 
 export const updateRecipeMutation = mutationOptions({
-  mutationFn: ({ id, imgUrl, ...rest }: Recipe) =>
+  mutationFn: ({ id, ...rest }: Recipe) =>
     api.put<Recipe>(`/recipes/${id}`, rest),
   async onMutate(value, context) {
     await context.client.cancelQueries({ queryKey: ["recipes", value.id] });
@@ -442,50 +435,6 @@ export const removeFromPlanMutation = mutationOptions({
   },
   async onSettled(data, error, variables, onMutateResult, context) {
     await context.client.invalidateQueries({ queryKey: ["planIds"] });
-  },
-});
-
-export const uploadImageMutation = mutationOptions({
-  mutationFn: ({ recipeId, file }: { recipeId: number; file: File }) => {
-    const formData = new FormData();
-    formData.append("image", file);
-    return api.post<{
-      recipe_id: number;
-      filename: string | null;
-      mime: string | null;
-      size_bytes: number | null;
-    }>(`/recipes/${recipeId}/image`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-  },
-  async onMutate(variables, context) {
-    await context.client.cancelQueries({
-      queryKey: ["recipes", variables.recipeId],
-    });
-    const prevRecipe = context.client.getQueryData<number>([
-      "recipes",
-      variables.recipeId,
-    ]);
-    context.client.setQueryData(
-      ["recipes", variables.recipeId],
-      (prev: Recipe | undefined) =>
-        prev ? { ...prev, imgUrl: URL.createObjectURL(variables.file) } : prev,
-    );
-    return { prevRecipe };
-  },
-  onError(error, variables, onMutateResult, context) {
-    context.client.setQueryData(
-      ["recipes", variables.recipeId],
-      onMutateResult?.prevRecipe,
-    );
-    // TODO: Notify user.
-  },
-  async onSettled(data, error, variables, onMutateResult, context) {
-    await context.client.invalidateQueries({
-      queryKey: ["recipes", variables.recipeId],
-    });
   },
 });
 

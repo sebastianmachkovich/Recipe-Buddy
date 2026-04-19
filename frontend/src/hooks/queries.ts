@@ -1,22 +1,21 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-    addRecipeMutation,
-    addToPlanMutation,
-    generateAIRecipesMutation,
-    allRecipesQuery,
-    currentUserQuery,
-    loginMutation,
-    logoutMutation,
-    planIdsQuery,
-    qc,
-    recipeIdsQuery,
-    recipeQuery,
-    removeFromPlanMutation,
-    removeRecipeMutation,
-    signupMutation,
-    updateRecipeMutation,
-    uploadImageMutation,
-    aiRecipesQuery
+  addRecipeMutation,
+  addToPlanMutation,
+  generateAIRecipesMutation,
+  allRecipesQuery,
+  currentUserQuery,
+  loginMutation,
+  logoutMutation,
+  planIdsQuery,
+  qc,
+  recipeIdsQuery
+  recipeQuery,
+  removeFromPlanMutation,
+  removeRecipeMutation,
+  signupMutation,
+  updateRecipeMutation,
+  aiRecipesQuery,
 } from "@/services/api";
 
 // User / Auth Hooks
@@ -41,6 +40,3 @@ export const useRemoveFromPlan = () => useMutation(removeFromPlanMutation, qc);
 // AI Hooks
 export const useAIRecipes = () => useQuery(aiRecipesQuery, qc);
 export const useGenerateAIRecipes = () => useMutation(generateAIRecipesMutation, qc);
-
-// Hooks that should be removed
-export const useUploadImage = () => useMutation(uploadImageMutation, qc);
