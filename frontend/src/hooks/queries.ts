@@ -12,6 +12,7 @@ import {
   signupMutation,
   updateRecipeMutation,
   aiRecipesQuery,
+  uploadImageMutation,
 } from "@/services/api";
 
 // User / Auth Hooks
@@ -31,3 +32,6 @@ export const useUpdateRecipe = () => useMutation(updateRecipeMutation, qc);
 export const useAIRecipes = () => useQuery(aiRecipesQuery, qc);
 export const useGenerateAIRecipes = () =>
   useMutation(generateAIRecipesMutation, qc);
+
+// Image Hooks
+export const useUploadImage = () => useMutation(uploadImageMutation, qc);

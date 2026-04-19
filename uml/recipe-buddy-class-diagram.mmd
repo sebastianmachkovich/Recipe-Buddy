@@ -1,0 +1,180 @@
+classDiagram
+    class Recipe {
+        +int id
+        +string name
+        +string? description
+        +bytes? image_data
+        +string? image_mime
+        +string? image_filename
+        +int? rating
+        +JSONB? ingredients
+        +JSONB? steps
+    }
+    class User {
+        +int id
+        +string email
+        +string password_hash
+        +DateTime created_at
+        +DateTime updated_at
+    }
+    class UserPlanItem {
+        +int id
+        +int user_id
+        +int recipe_id
+        +DateTime created_at
+    }
+    class UserRecipeOwnership {
+        +int id
+        +int user_id
+        +int recipe_id
+        +DateTime created_at
+    }
+
+    class RecipesRouter {
+        +get_recipes()
+        +get_random_recipes()
+        +get_recipe(id)
+        +create_recipe()
+        +update_recipe(id)
+        +delete_recipe(id)
+        +upload_recipe_image(id)
+        +get_recipe_image(id)
+        +delete_recipe_image(id)
+    }
+    class PlanRouter {
+        +get_user_plan()
+        +add_to_user_plan(recipe_id)
+        +remove_from_user_plan(recipe_id)
+    }
+    class AuthRouter {
+        +signup()
+        +login()
+        +logout()
+        +auth_me()
+        +auth_status()
+    }
+    class AIRouter {
+        +generate_recipes()
+        +generate_recipes_from_image()
+    }
+
+    class RecipeService {
+        +list_recipes(user)
+        +list_random_recipes(user)
+        +get_recipe_by_id(user, recipe_id)
+        +create_recipe_for_user(user, payload)
+        +update_recipe_for_user(user, recipe_id, payload)
+        +delete_recipe_for_user(user, recipe_id)
+        +upload_recipe_image_for_user(user, recipe_id, bytes, mime, filename)
+        +get_recipe_image_for_user(user, recipe_id)
+        +delete_recipe_image_for_user(user, recipe_id)
+    }
+    class PlanService {
+        +get_user_plan_ids(user)
+        +add_recipe_to_plan(user, recipe_id)
+        +remove_recipe_from_plan(user, recipe_id)
+    }
+    class AuthService {
+        +signup_user(email, password)
+        +login_user(email, password)
+    }
+    class AIService {
+        +normalize_ingredients(input)
+        +generate_recipes_with_groq(payload, ingredients)
+        +detect_ingredients_from_image(file)
+    }
+
+    class FrontendAPI {
+        +currentUserQuery
+        +loginMutation
+        +signupMutation
+        +logoutMutation
+        +recipeQuery(id)
+        +allRecipesQuery
+        +addRecipeMutation
+        +updateRecipeMutation
+        +removeRecipeMutation
+        +recipeIdsQuery
+        +planIdsQuery
+        +addToPlanMutation
+        +removeFromPlanMutation
+        +uploadImageMutation
+        +generateAIRecipesMutation
+    }
+
+    class RecipeDTO {
+        +int id
+        +string name
+        +string? description
+        +string? imgUrl
+        +int? rating
+        +RecipeIngredient[] ingredients
+        +RecipeStep[] steps
+    }
+    class RecipeIngredient {
+        +int id
+        +string name
+        +number amount
+        +string? unit
+    }
+    class RecipeStep {
+        +int id
+        +string description
+        +Time? time
+    }
+    class AIRecipeRequest {
+        +string[] ingredients
+        +int? max_recipes
+        +string? cuisine_preference
+        +string? dietary_preference
+    }
+    class AIRecipeResponse {
+        +AIRecipeSuggestion[] recipes
+        +string model
+    }
+    class AIImageRecipeResponse {
+        +string[] detected_ingredients
+        +AIRecipeSuggestion[] recipes
+        +string vision_model
+        +string recipe_model
+    }
+    class AIRecipeSuggestion {
+        +string name
+        +string description
+        +string[] ingredients
+        +string[] steps
+        +int? prep_time_minutes
+        +int? cook_time_minutes
+    }
+    class AuthUser {
+        +int id
+        +string email
+    }
+
+    RecipeService --> Recipe
+    RecipeService --> UserRecipeOwnership
+    RecipeService --> User
+    RecipeService --> UserPlanItem
+    RecipesRouter --> RecipeService
+    PlanRouter --> PlanService
+    AuthRouter --> AuthService
+    AIRouter --> AIService
+    AuthRouter --> User
+
+    FrontendAPI --> RecipeDTO
+    FrontendAPI --> AuthUser
+    FrontendAPI --> AIRecipeRequest
+    FrontendAPI --> AIRecipeResponse
+    FrontendAPI --> AIImageRecipeResponse
+    FrontendAPI --> AIRecipeSuggestion
+
+    Recipe <|-- UserPlanItem
+    User <|-- UserPlanItem
+    Recipe <|-- UserRecipeOwnership
+    User <|-- UserRecipeOwnership
+
+    note "Backend entrypoint: backend/main.py includes app.api.router" as N1
+    N1 ..> RecipesRouter
+    N1 ..> PlanRouter
+    N1 ..> AuthRouter
+    N1 ..> AIRouter

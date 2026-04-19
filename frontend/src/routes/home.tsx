@@ -11,7 +11,7 @@ import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import { Camera, LucideIcon, Sparkles, Upload } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { AIRecipeSuggestion, validateAuth } from "@/services/api";
-import { useAIRecipes, useGenerateAIRecipes } from "@/hooks/queries";
+import { useAddRecipe, useAIRecipes, useGenerateAIRecipes } from "@/hooks/queries";
 import { toast } from "sonner";
 import { useIsMutating } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -133,6 +133,36 @@ function DetectedIngredients() {
 
 function AIResults() {
   const { data: recipes, isSuccess } = useAIRecipes();
+  const addRecipe = useAddRecipe();
+
+  const handleAdd = (recipe: AIRecipeSuggestion) => {
+    const payload = {
+      name: recipe.name,
+      description: recipe.description,
+      rating: 0,
+      inPlan: false,
+      ingredients: recipe.ingredients.map((ingredient, index) => ({
+        id: index,
+        name: ingredient,
+        amount: 1,
+        unit: null,
+      })),
+      steps: recipe.steps.map((step, index) => ({
+        id: index,
+        description: step,
+        time: null,
+      })),
+    };
+
+    addRecipe.mutate(payload as any, {
+      onSuccess: () => {
+        toast.success("Recipe added to your collection");
+      },
+      onError: () => {
+        toast.error("Failed to add recipe");
+      },
+    });
+  };
 
   return (
     <>
@@ -172,6 +202,9 @@ function AIResults() {
                         ))}
                       </ol>
                     </div>
+                    <Button className="w-full" onClick={() => handleAdd(recipe)}>
+                      Add
+                    </Button>
                   </CardContent>
                 </Card>
               ),
