@@ -40,6 +40,21 @@ def strip_markdown_fences(text_value: str) -> str:
     return stripped
 
 
+def coerce_json_bool(value: Any) -> bool | None:
+    """Parse booleans from strict JSON or occasional string/number forms from LLMs."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and value in (0, 1):
+        return bool(value)
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in ("true", "yes", "1", "y"):
+            return True
+        if lowered in ("false", "no", "0", "n", ""):
+            return False
+    return None
+
+
 def extract_ingredients_list(content: str) -> list[str]:
     cleaned = strip_markdown_fences(content)
 
@@ -309,6 +324,8 @@ async def detect_ingredients_from_image(file: UploadFile) -> tuple[list[str], st
         "and return an empty ingredients list. "
         "Return STRICT JSON only with this exact schema and no extra keys: "
         '{"contains_ingredients": boolean, "ingredients": [{"name": string, "confidence": number}]}. '
+        "contains_ingredients MUST be present and MUST be false unless you clearly see multiple food ingredients; "
+        "when false, ingredients MUST be []. "
         "Rules: include only edible ingredients, exclude utensils/containers/brands/background objects, "
         "prefer concise singular names (e.g., tomato, onion, garlic), and confidence must be from 0 to 1."
     )
@@ -382,37 +399,53 @@ async def detect_ingredients_from_image(file: UploadFile) -> tuple[list[str], st
             detail = f"{detail} {provider_errors[0]}"
         raise HTTPException(status_code=502, detail=detail)
 
-    detected_ingredients: list[str] = []
-    contains_ingredients: bool | None = None
+    no_ingredients_msg = (
+        "No ingredients detected in the image. Please upload a photo of ingredients "
+        "(e.g., produce, spices, pantry items)."
+    )
+
+    parsed: dict[str, Any] | None = None
+    try:
+        raw = json.loads(strip_markdown_fences(content))
+        if isinstance(raw, dict):
+            parsed = raw
+    except json.JSONDecodeError:
+        parsed = None
+
+    # Require strict JSON with an explicit true — otherwise models omit the flag and we
+    # must not guess from free text (extract_ingredients_list would hallucinate items).
+    if parsed is None:
+        raise HTTPException(status_code=400, detail=no_ingredients_msg)
+
+    contains_flag = coerce_json_bool(parsed.get("contains_ingredients"))
+    if contains_flag is not True:
+        raise HTTPException(status_code=400, detail=no_ingredients_msg)
+
+    ingredients_payload = parsed.get("ingredients")
+    if not isinstance(ingredients_payload, list):
+        raise HTTPException(status_code=400, detail=no_ingredients_msg)
 
     try:
-        parsed = json.loads(strip_markdown_fences(content))
-        if isinstance(parsed, dict) and isinstance(parsed.get("contains_ingredients"), bool):
-            contains_ingredients = parsed["contains_ingredients"]
-        if isinstance(parsed, dict) and isinstance(parsed.get("ingredients"), list):
-            for item in parsed["ingredients"]:
-                if isinstance(item, dict):
-                    name = str(item.get("name", "")).strip()
-                    confidence_raw = item.get("confidence", 0)
-                    try:
-                        confidence = float(confidence_raw)
-                    except (TypeError, ValueError):
-                        confidence = 0
-                    if name and confidence >= 0.45:
-                        detected_ingredients.append(name)
-                elif isinstance(item, str):
-                    detected_ingredients.append(item.strip())
-    except json.JSONDecodeError:
-        detected_ingredients = []
+        min_confidence = float(os.getenv("GROQ_IMAGE_INGREDIENT_MIN_CONFIDENCE", "0.6"))
+    except ValueError:
+        min_confidence = 0.6
+    min_confidence = max(0.35, min(0.95, min_confidence))
 
-    if contains_ingredients is False:
-        raise HTTPException(
-            status_code=400,
-            detail="No ingredients detected in the image. Please upload a photo of ingredients (e.g., produce, spices, pantry items).",
-        )
-
-    if not detected_ingredients:
-        detected_ingredients = extract_ingredients_list(content)
+    detected_ingredients: list[str] = []
+    for item in ingredients_payload:
+        if isinstance(item, dict):
+            name = str(item.get("name", "")).strip()
+            confidence_raw = item.get("confidence", 0)
+            try:
+                confidence = float(confidence_raw)
+            except (TypeError, ValueError):
+                confidence = 0.0
+            if name and confidence >= min_confidence:
+                detected_ingredients.append(name)
+        elif isinstance(item, str) and item.strip():
+            # Legacy shape: string entries without confidence — require explicit flag true
+            # but treat as weak signal; skip unless we already have high-confidence dict items.
+            pass
 
     detected_ingredients = postprocess_detected_ingredients(detected_ingredients)
     detected_ingredients = await refine_detected_ingredients_with_groq(detected_ingredients)
