@@ -18,6 +18,7 @@ def serialize_recipe(recipe: Recipe) -> dict[str, Any]:
         "description": recipe.description,
         "imgUrl": recipe.imgUrl,
         "rating": recipe.rating,
+        "inPlan": recipe.inPlan,
         "ingredients": recipe.ingredients or [],
         "steps": recipe.steps or [],
     }
@@ -75,6 +76,7 @@ def create_recipe_for_user(db: Session, user: User, payload: RecipeWritePayload)
         description=payload.description,
         imgUrl=payload.imgUrl,
         rating=payload.rating,
+        inPlan=payload.inPlan,
         ingredients=[item.model_dump() for item in payload.ingredients],
         steps=[item.model_dump() for item in payload.steps],
     )
@@ -106,6 +108,7 @@ def update_recipe_for_user(db: Session, user: User, recipe_id: int, payload: Rec
     setattr(recipe, "description", payload.description)
     setattr(recipe, "imgUrl", payload.imgUrl)
     setattr(recipe, "rating", payload.rating)
+    setattr(recipe, "inPlan", payload.inPlan)
     setattr(recipe, "ingredients", [item.model_dump() for item in payload.ingredients])
     setattr(recipe, "steps", [item.model_dump() for item in payload.steps])
     db.commit()

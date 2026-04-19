@@ -19,5 +19,6 @@ class RecipeWritePayload(BaseModel):
     description: str | None = None
     imgUrl: str | None = None
     rating: int | None = Field(default=0, ge=0, le=5)
+    inPlan: bool = False
     ingredients: list[RecipeIngredientPayload] = Field(default_factory=list)
     steps: list[RecipeStepPayload] = Field(default_factory=list)

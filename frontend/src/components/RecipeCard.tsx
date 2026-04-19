@@ -9,13 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { EditRecipeDialogProvider } from "@/components/EditRecipeDialogProvider";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
-import {
-  useAddToPlan,
-  useRemoveFromPlan,
-  usePlanIds,
-  useRecipe,
-} from "@/hooks/queries";
-import { useMemo } from "react";
+import { useRecipe, useUpdateRecipe } from "@/hooks/queries";
 import { StarRating } from "./StarRating";
 import { Skeleton } from "./ui/skeleton";
 
@@ -107,13 +101,8 @@ export function RecipeCardFooter({
   recipeId: number;
   onLeft: boolean;
 }) {
-  const { data: planIds } = usePlanIds(false);
-  const isRecipeInPlan = useMemo(
-    () => planIds?.includes(recipeId),
-    [planIds, recipeId],
-  );
-  const { mutate: addToPlan } = useAddToPlan();
-  const { mutate: removeFromPlan } = useRemoveFromPlan();
+  const { data: recipe } = useRecipe(recipeId);
+  const { mutate: updateRecipe } = useUpdateRecipe();
 
   return (
     <CardFooter
@@ -125,16 +114,15 @@ export function RecipeCardFooter({
         size="lg"
         onClick={(e) => {
           e.stopPropagation();
-          if (isRecipeInPlan) removeFromPlan(recipeId);
-          else addToPlan(recipeId);
+          updateRecipe({ ...recipe!, inPlan: !recipe?.inPlan });
         }}
       >
-        {isRecipeInPlan ? (
+        {recipe!.inPlan ? (
           <Check className="h-4 w-4 mr-2" />
         ) : (
           <PlusIcon className="h-4 w-4 mr-2" />
         )}
-        {isRecipeInPlan ? "Cooking" : "Cook"}
+        {recipe!.inPlan ? "Cooking" : "Cook"}
       </Button>
     </CardFooter>
   );

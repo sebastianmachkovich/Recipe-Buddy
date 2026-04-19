@@ -71,6 +71,7 @@ export interface Recipe {
   description: string | null;
   imgUrl?: string;
   rating: number | null;
+  inPlan: boolean;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
 }
@@ -208,8 +209,7 @@ export const loginMutation = mutationOptions({
       String(Date.now() + 24 * 60 * 60 * 1000),
     );
     context.client.setQueryData(["currentUser"], user);
-    await context.client.invalidateQueries({ queryKey: ["planIds"] });
-    await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
+    await context.client.invalidateQueries({ queryKey: ["recipes"] });
     await context.client.invalidateQueries({ queryKey: ["feedIds"] });
   },
   onError(error, payload, onMutateResult, context) {
@@ -228,8 +228,7 @@ export const signupMutation = mutationOptions({
       String(Date.now() + 24 * 60 * 60 * 1000),
     );
     context.client.setQueryData(["currentUser"], user);
-    await context.client.invalidateQueries({ queryKey: ["planIds"] });
-    await context.client.invalidateQueries({ queryKey: ["recipeIds"] });
+    await context.client.invalidateQueries({ queryKey: ["recipes"] });
     await context.client.invalidateQueries({ queryKey: ["feedIds"] });
   },
   onError(error, payload, onMutateResult, context) {
@@ -244,8 +243,7 @@ export const logoutMutation = mutationOptions({
   },
   onSuccess(data, variables, onMutateResult, context) {
     context.client.removeQueries({ queryKey: ["currentUser"] });
-    context.client.removeQueries({ queryKey: ["planIds"] });
-    context.client.removeQueries({ queryKey: ["recipeIds"] });
+    context.client.removeQueries({ queryKey: ["recipes"] });
     context.client.removeQueries({ queryKey: ["feedIds"] });
   },
   async onError(error, variables, onMutateResult, context) {
@@ -263,40 +261,27 @@ export const recipeQuery = (id: number) =>
     enabled: !!id,
   });
 
-export const allRecipesQuery = queryOptions({
-  queryKey: ["recipes"],
-  async queryFn() {
-    const response = await api.get<Recipe[]>("/recipes/");
-    return response.data;
-  },
-});
-
 export const addRecipeMutation = mutationOptions({
-  mutationFn: ({ id, ...rest }: Recipe) =>
-    api.post<RecipeWritePayload>("/recipes/", rest),
+  mutationFn: ({ id, ...rest }: Recipe) => api.post<Recipe>("/recipes/", rest),
   onMutate(value, context) {
     context.client.setQueryData(["recipes", value.id], value);
-    context.client.setQueryData<number[]>(["recipeIds"], (ids) => [
-      ...(ids || []),
-      value.id,
-    ]);
-    context.client.setQueryData<number[]>(["planIds"], (ids) => [
-      ...(ids || []),
-      value.id,
-    ]);
+    context.client.setQueryData<Recipe[]>(["recipes"], (recipes) =>
+      [...(recipes || []), value].sort((a, b) => a.name.localeCompare(b.name)),
+    );
     return {
-      prevRecipeIds: context.client.getQueryData<number[]>(["recipeIds"]),
+      prevRecipes: context.client.getQueryData<Recipe[]>(["recipes"]),
     };
   },
-  onSuccess(data, variables, onMutateResult, context) {
+  onSuccess({ data }, variables, onMutateResult, context) {
     // Clean up the temp-ID cache entry
-    context.client.removeQueries({ queryKey: ["recipes", variables.id] });
+    context.client.setQueryData(["recipes", data.id], data);
+    context.client.setQueryData(["recipes", variables.id], data);
   },
   onError(error, variables, onMutateResult, context) {
     context.client.removeQueries({ queryKey: ["recipes", variables.id] });
-    context.client.setQueryData<number[]>(
-      ["recipeIds"],
-      onMutateResult?.prevRecipeIds,
+    context.client.setQueryData<Recipe[]>(
+      ["recipes"],
+      onMutateResult?.prevRecipes,
     );
     toast.error("Failed to create recipe", { description: error.message });
   },
@@ -304,8 +289,7 @@ export const addRecipeMutation = mutationOptions({
     if (data) {
       context.client.invalidateQueries({ queryKey: ["recipes", data.data.id] });
     }
-    context.client.invalidateQueries({ queryKey: ["recipeIds"] });
-    context.client.invalidateQueries({ queryKey: ["planIds"] });
+    context.client.invalidateQueries({ queryKey: ["recipes"] });
   },
 });
 
@@ -316,38 +300,27 @@ export const removeRecipeMutation = mutationOptions({
   },
   async onMutate(id, context) {
     context.client.cancelQueries({ queryKey: ["recipes", id] });
-    context.client.cancelQueries({ queryKey: ["recipeIds"] });
-    context.client.cancelQueries({ queryKey: ["planIds"] });
+    context.client.cancelQueries({ queryKey: ["recipes"] });
     const prevRecipe = context.client.getQueryData<number>(["recipes", id]);
-    const prevRecipeIds = context.client.getQueryData<number[]>(["recipeIds"]);
-    const prevPlanIds = context.client.getQueryData<number[]>(["planIds"]);
+    const prevRecipes = context.client.getQueryData<number[]>(["recipes"]);
     context.client.setQueryData(["recipes", id], undefined);
     context.client.setQueryData<number[]>(
-      ["recipeIds"],
+      ["recipes"],
       (ids: number[] | undefined) => ids?.filter((it) => it !== id),
     );
-    context.client.setQueryData<number[]>(
-      ["planIds"],
-      (ids: number[] | undefined) => ids?.filter((it) => it !== id),
-    );
-    return { prevRecipe, prevRecipeIds, prevPlanIds };
+    return { prevRecipe, prevRecipes };
   },
   onError(error, id, onMutateResult, context) {
     context.client.setQueryData(["recipes", id], onMutateResult?.prevRecipe);
     context.client.setQueryData<number[]>(
-      ["recipeIds"],
-      onMutateResult?.prevRecipeIds,
-    );
-    context.client.setQueryData<number[]>(
-      ["planIds"],
-      onMutateResult?.prevPlanIds,
+      ["recipes"],
+      onMutateResult?.prevRecipes,
     );
     // TODO: Notify user.
   },
   async onSettled(data, error, id, onMutateResult, context) {
     context.client.invalidateQueries({ queryKey: ["recipes", id] });
-    context.client.invalidateQueries({ queryKey: ["recipeIds"] });
-    context.client.invalidateQueries({ queryKey: ["planIds"] });
+    context.client.invalidateQueries({ queryKey: ["recipes"] });
   },
 });
 
@@ -361,80 +334,26 @@ export const updateRecipeMutation = mutationOptions({
       value.id,
     ]);
     context.client.setQueryData(["recipes", value.id], value);
-    return { prevRecipe };
+    return prevRecipe;
   },
   onSuccess(data, variables, context) {
     toast.success("Recipe updated");
   },
-  onError(error, variables, onMutateResult, context) {
-    context.client.setQueryData(
-      ["recipes", variables.id],
-      onMutateResult?.prevRecipe,
-    );
+  onError(error, { id }, prevRecipe, context) {
+    context.client.setQueryData(["recipes", id], prevRecipe);
     toast.error("Failed to update recipe", { description: error.message });
   },
-  onSettled(data, error, variables, onMutateResult, context) {
-    context.client.invalidateQueries({ queryKey: ["recipes", variables.id] });
-    context.client.invalidateQueries({ queryKey: ["recipeIds"] });
+  onSettled(data, error, { id }, prevRecipe, context) {
+    context.client.invalidateQueries({ queryKey: ["recipes", id] });
+    context.client.invalidateQueries({ queryKey: ["recipes"] });
   },
 });
 
-export const recipeIdsQuery = queryOptions({
-  queryKey: ["recipeIds"],
+export const allRecipesQuery = queryOptions({
+  queryKey: ["recipes"],
   async queryFn() {
     const response = await api.get<Recipe[]>("/recipes/");
-    return response.data
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((recipe) => recipe.id);
-  },
-});
-
-export const planIdsQuery = (isAuthPage: boolean) =>
-  queryOptions({
-    queryKey: ["planIds"],
-    async queryFn() {
-      if (isAuthPage) return [];
-      const response = await api.get<number[]>("/plan/");
-      return response.data;
-    },
-  });
-
-export const addToPlanMutation = mutationOptions({
-  mutationFn: (id: number) => api.post<{ recipe_id: number }>(`/plan/${id}`),
-  async onMutate(value, context) {
-    await context.client.cancelQueries({ queryKey: ["planIds"] });
-    const prev = context.client.getQueryData<number[]>(["planIds"]);
-    context.client.setQueryData<number[]>(["planIds"], (ids) => [
-      ...(ids || []),
-      value,
-    ]);
-    return { prev };
-  },
-  onError(error, value, onMutateResult, context) {
-    context.client.setQueryData<number[]>(["planIds"], onMutateResult?.prev);
-    // TODO: Notify user.
-  },
-  async onSettled(data, error, variables, onMutateResult, context) {
-    await context.client.invalidateQueries({ queryKey: ["planIds"] });
-  },
-});
-
-export const removeFromPlanMutation = mutationOptions({
-  mutationFn: (id: number) => api.delete<{ deleted: boolean }>(`/plan/${id}`),
-  async onMutate(value, context) {
-    await context.client.cancelQueries({ queryKey: ["planIds"] });
-    const prev = context.client.getQueryData<number[]>(["planIds"]);
-    context.client.setQueryData<number[]>(["planIds"], (ids) =>
-      ids?.filter((it) => it !== value),
-    );
-    return { prev };
-  },
-  onError(error, value, onMutateResult, context) {
-    context.client.setQueryData<number[]>(["planIds"], onMutateResult?.prev);
-    // TODO: Notify user.
-  },
-  async onSettled(data, error, variables, onMutateResult, context) {
-    await context.client.invalidateQueries({ queryKey: ["planIds"] });
+    return response.data.sort((a, b) => a.name.localeCompare(b.name));
   },
 });
 

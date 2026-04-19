@@ -3,8 +3,8 @@ import {
   RecipeCard,
   RecipeCardSkeleton,
 } from "@/components/RecipeCard";
-import { useRecipeIds } from "@/hooks/queries";
-import { cn } from "@/lib/utils";
+import { useAllRecipes } from "@/hooks/queries";
+import { cn, hashString } from "@/lib/utils";
 import { validateAuth } from "@/services/api";
 import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -25,7 +25,7 @@ function RecipesPageGrid({ children }: { children: React.ReactNode }) {
 }
 
 function RecipesPage() {
-  const { data: recipeIds, isLoading, error } = useRecipeIds();
+  const { data: recipes, isLoading, error } = useAllRecipes();
 
   if (isLoading)
     return (
@@ -43,8 +43,8 @@ function RecipesPage() {
   return (
     <RecipesPageGrid>
       <AddRecipeCard />
-      {recipeIds?.map((it) => {
-        return <RecipeCard key={it} recipeId={it} />;
+      {recipes?.map((it) => {
+        return <RecipeCard key={hashString(it.name)} recipeId={it.id} />;
       })}
     </RecipesPageGrid>
   );

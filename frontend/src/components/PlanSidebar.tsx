@@ -13,7 +13,7 @@ import {
 import { Button } from "./ui/button";
 import { X } from "lucide-react";
 import { EditRecipeDialogProvider } from "./EditRecipeDialogProvider";
-import { usePlanIds, useRecipe, useRemoveFromPlan } from "@/hooks/queries";
+import { useAllRecipes, useRecipe, useUpdateRecipe } from "@/hooks/queries";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +24,7 @@ export function PlanSidebar() {
   const isWalkthroughPage = useRouterState({
     select: (state) => state.location.pathname === "/walkthrough",
   });
-  const { data: recipeIdsInPlan } = usePlanIds(isAuthPage);
+  const { data: recipes } = useAllRecipes();
   const navigate = useNavigate();
 
   return (
@@ -46,9 +46,11 @@ export function PlanSidebar() {
             <SidebarGroupLabel>Plan</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {recipeIdsInPlan?.map((id) => (
-                  <EditRecipeSidebarMenuButton key={id} recipeId={id} />
-                ))}
+                {recipes
+                  ?.filter((it) => it.inPlan)
+                  .map((it) => (
+                    <EditRecipeSidebarMenuButton key={it.id} recipeId={it.id} />
+                  ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -69,7 +71,7 @@ export function PlanSidebar() {
 
 function EditRecipeSidebarMenuButton({ recipeId }: { recipeId: number }) {
   const { data: recipe } = useRecipe(recipeId);
-  const { mutate: removeFromPlan } = useRemoveFromPlan();
+  const { mutate: updateRecipe } = useUpdateRecipe();
   return (
     <SidebarMenuItem key={recipeId}>
       <EditRecipeDialogProvider recipeId={recipeId}>
@@ -82,7 +84,7 @@ function EditRecipeSidebarMenuButton({ recipeId }: { recipeId: number }) {
             className="ml-auto transition-colors rounded-sm dark:hover:bg-[#403b3a]"
             onClick={(e) => {
               e.stopPropagation();
-              removeFromPlan(recipeId);
+              updateRecipe({ ...recipe!, inPlan: false });
             }}
           >
             <X className="h-6 w-6" />
