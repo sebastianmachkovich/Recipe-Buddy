@@ -457,35 +457,3 @@ export const generateAIRecipesMutation = mutationOptions({
     context.client.setQueryData<AIResponseData>(["aiRecipes"], data);
   },
 });
-
-export const uploadImageMutation = mutationOptions({
-  mutationFn: ({ recipeId, file }: { recipeId: number; file: File }) => {
-    const formData = new FormData();
-    formData.append("image", file);
-    return api.post<{
-      recipe_id: number;
-      filename: string | null;
-      mime: string | null;
-      size_bytes: number | null;
-    }>(`/recipes/${recipeId}/image`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-  },
-  async onMutate(variables, context) {
-    await context.client.cancelQueries({ queryKey: ["recipes", variables.recipeId] });
-    const prevRecipe = context.client.getQueryData<Recipe>(["recipes", variables.recipeId]);
-    context.client.setQueryData(["recipes", variables.recipeId], (prev: Recipe | undefined) =>
-      prev ? { ...prev, imgUrl: URL.createObjectURL(variables.file) } : prev,
-    );
-    return { prevRecipe };
-  },
-  onError(error, variables, onMutateResult, context) {
-    context.client.setQueryData(["recipes", variables.recipeId], onMutateResult?.prevRecipe);
-    toast.error("Failed to upload image", { description: error.message });
-  },
-  async onSettled(data, error, variables, onMutateResult, context) {
-    await context.client.invalidateQueries({ queryKey: ["recipes", variables.recipeId] });
-  },
-});
