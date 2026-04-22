@@ -8,13 +8,29 @@ import {
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { createFileRoute, useRouterState } from "@tanstack/react-router";
-import { Camera, LucideIcon, Sparkles, Upload } from "lucide-react";
-import { ChangeEvent, useRef, useState } from "react";
+import {
+  Bookmark,
+  BookmarkCheck,
+  Camera,
+  LucideIcon,
+  Sparkles,
+  Upload,
+} from "lucide-react";
+import { ChangeEvent, useRef } from "react";
 import { AIRecipeSuggestion, validateAuth } from "@/services/api";
-import { useAddRecipe, useAIRecipes, useGenerateAIRecipes } from "@/hooks/queries";
+import {
+  useAddRecipe,
+  useAIRecipes,
+  useAllRecipes,
+  useGenerateAIRecipes,
+} from "@/hooks/queries";
 import { toast } from "sonner";
-import { useIsMutating } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
+
+// State
+const imagePreviewUrlAtom = atom<string | undefined>(undefined);
+const ingredientsInputAtom = atom("");
 
 function HomePage() {
   const isNavigatingAway = useRouterState({
@@ -22,9 +38,6 @@ function HomePage() {
       state.location.pathname === "/" ||
       state.location.pathname === "/walkthrough",
   });
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | undefined>(
-    undefined,
-  );
   return (
     <div
       className={cn(
@@ -44,8 +57,8 @@ function HomePage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <ImagePreview imagePreviewUrl={imagePreviewUrl} />
-          <AIInput setImagePreviewUrl={setImagePreviewUrl} />
+          <ImagePreview />
+          <AIInput />
           <DetectedIngredients />
           <AIResults />
         </CardContent>
@@ -54,7 +67,8 @@ function HomePage() {
   );
 }
 
-function ImagePreview({ imagePreviewUrl }: { imagePreviewUrl?: string }) {
+function ImagePreview() {
+  const imagePreviewUrl = useAtomValue(imagePreviewUrlAtom);
   return (
     <>
       {imagePreviewUrl && (
@@ -68,15 +82,10 @@ function ImagePreview({ imagePreviewUrl }: { imagePreviewUrl?: string }) {
   );
 }
 
-function AIInput({
-  setImagePreviewUrl,
-}: {
-  setImagePreviewUrl: (url: string | undefined) => void;
-}) {
-  const { mutate: submit } = useGenerateAIRecipes();
-  const count = useIsMutating({ mutationKey: ["generateAIRecipes"] });
-  const isGenerating = count > 0;
-  const [ingredientsInput, setIngredientsInput] = useState("");
+function AIInput() {
+  const setImagePreviewUrl = useSetAtom(imagePreviewUrlAtom);
+  const { mutate: submit, isPending } = useGenerateAIRecipes();
+  const [ingredientsInput, setIngredientsInput] = useAtom(ingredientsInputAtom);
   return (
     <>
       <Textarea
@@ -87,29 +96,21 @@ function AIInput({
       />
       <div className="flex flex-row flex-wrap gap-2">
         <Button
-          disabled={ingredientsInput.length === 0 || isGenerating}
+          disabled={ingredientsInput.length === 0 || isPending}
           onClick={() => {
             setImagePreviewUrl(undefined);
             submit(ingredientsInput);
           }}
         >
-          {isGenerating ? "Generating..." : "Generate Recipes"}
+          {isPending ? "Generating..." : "Generate Recipes"}
         </Button>
         <span className="grow" />
         <ImageUploadButton
           isCamera={false}
           label="Upload Photo"
           icon={Upload}
-          setImagePreviewUrl={setImagePreviewUrl}
-          setIngredientsInput={setIngredientsInput}
         />
-        <ImageUploadButton
-          isCamera={true}
-          label="Take Photo"
-          icon={Camera}
-          setImagePreviewUrl={setImagePreviewUrl}
-          setIngredientsInput={setIngredientsInput}
-        />
+        <ImageUploadButton isCamera={true} label="Take Photo" icon={Camera} />
       </div>
     </>
   );
@@ -133,36 +134,6 @@ function DetectedIngredients() {
 
 function AIResults() {
   const { data: recipes, isSuccess } = useAIRecipes();
-  const addRecipe = useAddRecipe();
-
-  const handleAdd = (recipe: AIRecipeSuggestion) => {
-    const payload = {
-      name: recipe.name,
-      description: recipe.description,
-      rating: 0,
-      inPlan: false,
-      ingredients: recipe.ingredients.map((ingredient, index) => ({
-        id: index,
-        name: ingredient,
-        amount: 1,
-        unit: null,
-      })),
-      steps: recipe.steps.map((step, index) => ({
-        id: index,
-        description: step,
-        time: null,
-      })),
-    };
-
-    addRecipe.mutate(payload as any, {
-      onSuccess: () => {
-        toast.success("Recipe added to your collection");
-      },
-      onError: () => {
-        toast.error("Failed to add recipe");
-      },
-    });
-  };
 
   return (
     <>
@@ -202,9 +173,7 @@ function AIResults() {
                         ))}
                       </ol>
                     </div>
-                    <Button className="w-full" onClick={() => handleAdd(recipe)}>
-                      Add
-                    </Button>
+                    <SaveButton suggestion={recipe} />
                   </CardContent>
                 </Card>
               ),
@@ -216,27 +185,62 @@ function AIResults() {
   );
 }
 
+function SaveButton({ suggestion }: { suggestion: AIRecipeSuggestion }) {
+  const { mutate: addRecipe, isSuccess: wasSaved } = useAddRecipe();
+
+  // TODO: This is not a correct way to handle this.  We need the AI to
+  //       generate real recipe objects with steps and ingredients.
+  function handleAdd() {
+    const payload = {
+      name: suggestion.name,
+      description: suggestion.description,
+      rating: 0,
+      inPlan: false,
+      ingredients: suggestion.ingredients.map((ingredient, index) => ({
+        id: index,
+        name: ingredient,
+        amount: 1,
+        unit: null,
+      })),
+      steps: suggestion.steps.map((step, index) => ({
+        id: index,
+        description: step,
+        time: null,
+      })),
+    };
+
+    addRecipe(payload);
+  }
+
+  return (
+    <Button className="w-full" disabled={wasSaved} onClick={() => handleAdd()}>
+      {wasSaved ? (
+        <BookmarkCheck className="h-4 w-4 mr-2" />
+      ) : (
+        <Bookmark className="h-4 w-4 mr-2" />
+      )}
+      {wasSaved ? "Saved" : "Save"}
+    </Button>
+  );
+}
+
 function ImageUploadButton({
   isCamera,
   label,
   icon: Icon,
-  setImagePreviewUrl,
-  setIngredientsInput,
 }: {
   isCamera: boolean;
   label: string;
   icon: LucideIcon;
-  setImagePreviewUrl: (url: string | undefined) => void;
-  setIngredientsInput: (ingredientsInput: string) => void;
 }) {
+  const setImagePreviewUrl = useSetAtom(imagePreviewUrlAtom);
+  const setIngredientsInput = useSetAtom(ingredientsInputAtom);
+  const { mutate: submit, isPending } = useGenerateAIRecipes();
   const inputRef = useRef<HTMLInputElement>(null);
-  const { mutate: submit } = useGenerateAIRecipes();
-  const count = useIsMutating({ mutationKey: ["generateAIRecipes"] });
-  const isGenerating = count > 0;
 
   const handleImageSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || isGenerating) {
+    if (!file || isPending) {
       return;
     }
 
@@ -254,7 +258,7 @@ function ImageUploadButton({
   return (
     <Button
       variant="outline"
-      disabled={isGenerating}
+      disabled={isPending}
       onClick={() => inputRef?.current?.click()}
     >
       <input

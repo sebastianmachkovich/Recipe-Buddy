@@ -389,6 +389,11 @@ export const allRecipesQuery = queryOptions({
 export const aiRecipesQuery = queryOptions<AIResponseData>({
   queryKey: ["aiRecipes"],
   enabled: false,
+  refetchOnMount: false,
+  refetchOnReconnect: false,
+  refetchOnWindowFocus: false,
+  retry: false,
+  retryOnMount: false,
   initialData: {
     recipes: [],
     detected_ingredients: [],
