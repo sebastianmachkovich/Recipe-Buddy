@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
-import { getAuthStatus } from "@/services/api";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,7 +23,7 @@ function AuthPage() {
 
   const isPending = isLoggingIn || isSigningUp;
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
