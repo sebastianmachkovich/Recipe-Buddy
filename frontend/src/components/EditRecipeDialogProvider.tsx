@@ -14,8 +14,10 @@ import { UnparsedTextInputFieldList } from "./UnparsedTextInputFieldList";
 import { ReorderableInputField } from "./ReorderableInput";
 import { DeleteRecipeButton } from "./DeleteRecipeButton";
 import { UploadImageHeader } from "./UploadImageHeader";
-import { useAddRecipe, useUpdateRecipe } from "@/hooks/queries";
+import { useAddRecipe, useAllRecipes, useUpdateRecipe } from "@/hooks/queries";
 import { atom, useAtom, useSetAtom } from "jotai";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
 
 export const editRecipeContext = {
   name: atom(""),
@@ -34,6 +36,7 @@ export function EditRecipeDialogProvider({
   children: React.ReactNode;
   recipe?: Recipe;
 }) {
+  const { data: recipes } = useAllRecipes();
   const { mutate: addRecipe } = useAddRecipe();
   const { mutate: updateRecipe } = useUpdateRecipe();
 
@@ -50,8 +53,10 @@ export function EditRecipeDialogProvider({
   const [open, setOpen] = useState(false);
 
   // Error states for the form fields.
-  const [nameError, setNameError] = useState(false);
-  const [descriptionError, setDescriptionError] = useState(false);
+  const [nameError, setNameError] = useState(undefined as string | undefined);
+  const [descriptionError, setDescriptionError] = useState(
+    undefined as string | undefined,
+  );
 
   // Opens the dialog if the trigger is clicked.
   function handleOpenChange(newOpen: boolean) {
@@ -62,8 +67,8 @@ export function EditRecipeDialogProvider({
       setImgUrl(recipe?.imgUrl ?? undefined);
       setSteps(recipe?.steps ?? []);
       setIngredients(recipe?.ingredients ?? []);
-      setNameError(false);
-      setDescriptionError(false);
+      setNameError(undefined);
+      setDescriptionError(undefined);
       setNewIngredients([]);
       setNewSteps([]);
     }
@@ -74,11 +79,15 @@ export function EditRecipeDialogProvider({
     // Does basic input validation.
     let hasErrors = false;
     if (!editRecipeContext.name) {
-      setNameError(true);
+      setNameError("Name Required");
+      hasErrors = true;
+    }
+    if (recipe?.name !== name && recipes!.some((it) => it.name === name)) {
+      setNameError("Choose a Unique Name");
       hasErrors = true;
     }
     if (!editRecipeContext.description) {
-      setDescriptionError(true);
+      setDescriptionError("Description Required");
       hasErrors = true;
     }
     if (hasErrors) return;
@@ -125,24 +134,18 @@ export function EditRecipeDialogProvider({
           <UploadImageHeader />
           <div className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden min-h-0 px-3">
             <ErrableTextInputField
-              kind="input"
-              id="edit-recipe-name"
+              kind={Input}
               description="Name"
               placeholder="Something Delicious"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              hasError={nameError}
-              errorMsg="Name Required"
+              valueAtom={editRecipeContext.name}
+              errorMsg={nameError}
             />
             <ErrableTextInputField
-              kind="textarea"
-              id="edit-recipe-description"
+              kind={Textarea}
               description="Description"
               placeholder="Its flavor was good, but it calls for too much lemon."
-              value={description ?? ""}
-              onChange={(e) => setDescription(e.target.value)}
-              hasError={descriptionError}
-              errorMsg="Description Required"
+              valueAtom={editRecipeContext.description}
+              errorMsg={descriptionError}
             />
             <ReorderableInputField type="ingredients" />
             <UnparsedTextInputFieldList
