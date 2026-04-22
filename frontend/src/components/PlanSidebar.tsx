@@ -18,13 +18,12 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 export function PlanSidebar() {
-  const isAuthPage = useRouterState({
-    select: (state) => state.location.pathname === "/",
+  const shouldBeHidden = useRouterState({
+    select: (state) =>
+      state.location.pathname === "/" ||
+      state.location.pathname === "/walkthrough",
   });
-  const isWalkthroughPage = useRouterState({
-    select: (state) => state.location.pathname === "/walkthrough",
-  });
-  const { data: recipes } = useAllRecipes();
+  const { data: recipes } = useAllRecipes(!shouldBeHidden);
   const navigate = useNavigate();
 
   return (
@@ -32,7 +31,7 @@ export function PlanSidebar() {
       defaultOpen={true}
       className={cn(
         "w-fit overflow-hidden max-h-dvh",
-        isAuthPage || isWalkthroughPage ? "hidden" : "",
+        shouldBeHidden ? "hidden" : "",
       )}
     >
       <Sidebar

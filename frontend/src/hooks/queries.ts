@@ -22,7 +22,8 @@ export const useLogout = () => useMutation(logoutMutation, qc);
 
 // Recipe Hooks
 export const useRecipe = (id: number) => useQuery(recipeQuery(id), qc);
-export const useAllRecipes = () => useQuery(allRecipesQuery, qc);
+export const useAllRecipes = (enabled: boolean = true) =>
+  useQuery({ ...allRecipesQuery, enabled }, qc);
 export const useAddRecipe = () => useMutation(addRecipeMutation, qc);
 export const useRemoveRecipe = () => useMutation(removeRecipeMutation, qc);
 export const useUpdateRecipe = () => useMutation(updateRecipeMutation, qc);
