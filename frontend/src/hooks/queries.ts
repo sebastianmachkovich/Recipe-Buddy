@@ -7,7 +7,6 @@ import {
   loginMutation,
   logoutMutation,
   qc,
-  recipeQuery,
   removeRecipeMutation,
   signupMutation,
   updateRecipeMutation,
@@ -21,7 +20,6 @@ export const useLogin = () => useMutation(loginMutation, qc);
 export const useLogout = () => useMutation(logoutMutation, qc);
 
 // Recipe Hooks
-export const useRecipe = (id: number) => useQuery(recipeQuery(id), qc);
 export const useAllRecipes = (enabled: boolean = true) =>
   useQuery({ ...allRecipesQuery, enabled }, qc);
 export const useAddRecipe = () => useMutation(addRecipeMutation, qc);

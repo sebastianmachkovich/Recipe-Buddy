@@ -7,14 +7,14 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { RecipeIngredient, RecipeStep } from "@/services/api";
+import { Recipe, RecipeIngredient, RecipeStep } from "@/services/api";
 import { useState } from "react";
 import { ErrableTextInputField } from "./ErrableTextInputField";
 import { UnparsedTextInputFieldList } from "./UnparsedTextInputFieldList";
 import { ReorderableInputField } from "./ReorderableInput";
 import { DeleteRecipeButton } from "./DeleteRecipeButton";
 import { UploadImageHeader } from "./UploadImageHeader";
-import { useAddRecipe, useRecipe, useUpdateRecipe } from "@/hooks/queries";
+import { useAddRecipe, useUpdateRecipe } from "@/hooks/queries";
 import { atom, useAtom, useSetAtom } from "jotai";
 
 export const editRecipeContext = {
@@ -29,12 +29,11 @@ export const editRecipeContext = {
 
 export function EditRecipeDialogProvider({
   children,
-  recipeId,
+  recipe,
 }: {
   children: React.ReactNode;
-  recipeId?: number;
+  recipe?: Recipe;
 }) {
-  const { data: recipe } = useRecipe(recipeId);
   const { mutate: addRecipe } = useAddRecipe();
   const { mutate: updateRecipe } = useUpdateRecipe();
 
@@ -94,8 +93,7 @@ export function EditRecipeDialogProvider({
     // appends it to the list.
     if (recipe) {
       updateRecipe({
-        id: recipe.id,
-        rating: recipe.rating,
+        ...recipe,
         name,
         description,
         ingredients,
@@ -105,6 +103,7 @@ export function EditRecipeDialogProvider({
     } else {
       addRecipe({
         rating: 0,
+        inPlan: false,
         name,
         description,
         ingredients,

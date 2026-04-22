@@ -13,9 +13,10 @@ import {
 import { Button } from "./ui/button";
 import { X } from "lucide-react";
 import { EditRecipeDialogProvider } from "./EditRecipeDialogProvider";
-import { useAllRecipes, useRecipe, useUpdateRecipe } from "@/hooks/queries";
+import { useAllRecipes, useUpdateRecipe } from "@/hooks/queries";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
+import { Recipe } from "@/services/api";
 
 export function PlanSidebar() {
   const shouldBeHidden = useRouterState({
@@ -48,7 +49,7 @@ export function PlanSidebar() {
                 {recipes
                   ?.filter((it) => it.inPlan)
                   .map((it) => (
-                    <EditRecipeSidebarMenuButton key={it.id} recipeId={it.id} />
+                    <EditRecipeSidebarMenuButton key={it.id} recipe={it} />
                   ))}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -68,12 +69,11 @@ export function PlanSidebar() {
   );
 }
 
-function EditRecipeSidebarMenuButton({ recipeId }: { recipeId: number }) {
-  const { data: recipe } = useRecipe(recipeId);
+function EditRecipeSidebarMenuButton({ recipe }: { recipe: Recipe }) {
   const { mutate: updateRecipe } = useUpdateRecipe();
   return (
-    <SidebarMenuItem key={recipeId}>
-      <EditRecipeDialogProvider recipeId={recipeId}>
+    <SidebarMenuItem key={recipe.id}>
+      <EditRecipeDialogProvider recipe={recipe}>
         <SidebarMenuButton>
           {recipe?.name}
           <Button

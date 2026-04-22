@@ -9,9 +9,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { EditRecipeDialogProvider } from "@/components/EditRecipeDialogProvider";
 import BowlWhisk from "@/assets/bowl-whisk.svg";
-import { useRecipe, useUpdateRecipe } from "@/hooks/queries";
+import { useUpdateRecipe } from "@/hooks/queries";
 import { StarRating } from "./StarRating";
 import { Skeleton } from "./ui/skeleton";
+import { Recipe } from "@/services/api";
 
 export function AddRecipeCard() {
   return (
@@ -58,19 +59,18 @@ function RecipeCardError() {
   );
 }
 
-export function RecipeCard({ recipeId }: { recipeId: number }) {
-  const { data: recipe, isLoading, error } = useRecipe(recipeId);
-  if (isLoading || !recipe) {
-    return <RecipeCardSkeleton />;
-  }
-  if (error) {
-    return <RecipeCardError />;
-  }
+export function RecipeCard({ recipe }: { recipe: Recipe }) {
+  //if (isLoading || !recipe) {
+  //  return <RecipeCardSkeleton />;
+  //}
+  //if (error) {
+  //  return <RecipeCardError />;
+  //}
 
   const imageSrc = recipe.imgUrl || BowlWhisk;
 
   return (
-    <EditRecipeDialogProvider recipeId={recipeId}>
+    <EditRecipeDialogProvider recipe={recipe}>
       <Card className="group h-full flex flex-col pt-0 overflow-hidden select-none hover:bg-accent hover:text-accent-foreground dark:bg-card dark:border-input dark:hover:bg-input cursor-pointer">
         <img
           src={imageSrc}
@@ -88,27 +88,18 @@ export function RecipeCard({ recipeId }: { recipeId: number }) {
           </div>
         </CardHeader>
 
-        <RecipeCardFooter recipeId={recipeId} onLeft={false} />
+        <RecipeCardFooter recipe={recipe} />
       </Card>
     </EditRecipeDialogProvider>
   );
 }
 
-export function RecipeCardFooter({
-  recipeId,
-  onLeft,
-}: {
-  recipeId: number;
-  onLeft: boolean;
-}) {
-  const { data: recipe } = useRecipe(recipeId);
+export function RecipeCardFooter({ recipe }: { recipe: Recipe }) {
   const { mutate: updateRecipe } = useUpdateRecipe();
 
   return (
-    <CardFooter
-      className={`w-full flex ${onLeft ? "flex-row-reverse" : "flex-row"} justify-between gap-2`}
-    >
-      <StarRating recipeId={recipeId} />
+    <CardFooter className="w-full flex flex-row justify-between gap-2">
+      <StarRating recipe={recipe} />
       <Button
         variant="default"
         size="lg"

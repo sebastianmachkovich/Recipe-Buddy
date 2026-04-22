@@ -248,44 +248,31 @@ export const logoutMutation = mutationOptions({
   },
 });
 
-export const recipeQuery = (id: number) =>
-  queryOptions({
-    queryKey: ["recipes", id],
-    async queryFn() {
-      const response = await api.get<Recipe>(`/recipes/${id}`);
-      return { ...response.data };
-    },
-    enabled: !!id,
-  });
-
 export const addRecipeMutation = mutationOptions({
-  mutationFn: ({ id, ...rest }: Recipe) => api.post<Recipe>("/recipes/", rest),
-  onMutate(value, context) {
-    context.client.setQueryData(["recipes", value.id], value);
-    context.client.setQueryData<Recipe[]>(["recipes"], (recipes) =>
-      [...(recipes || []), value].sort((a, b) => a.name.localeCompare(b.name)),
+  mutationFn: (fields: RecipeWritePayload) =>
+    api.post<Recipe>("/recipes/", fields),
+  async onMutate(value, context) {
+    await context.client.cancelQueries({ queryKey: ["recipes"] });
+    const prevRecipes = context.client.getQueryData<Recipe[]>(["recipes"]);
+    const newRecipes = context.client.setQueryData<Recipe[]>(
+      ["recipes"],
+      // Here, `value` is supposed to have its `id` field unset. Hence, we
+      // get a type error.
+      prevRecipes!.concat(value).sort((a, b) => a.name.localeCompare(b.name)),
     );
-    return {
-      prevRecipes: context.client.getQueryData<Recipe[]>(["recipes"]),
-    };
+    return { prevRecipes, newRecipes };
   },
-  onSuccess({ data }, variables, onMutateResult, context) {
-    // Clean up the temp-ID cache entry
-    context.client.setQueryData(["recipes", data.id], data);
-    context.client.setQueryData(["recipes", variables.id], data);
+  onSuccess({ data }, variables, { newRecipes }, context) {
+    // We fill in the `id` field of the new recipe with the one returned by
+    // the server right here.
+    const idx = newRecipes!.findIndex((it) => it.id === data.id);
+    context.client.setQueryData(["recipes"], newRecipes!.with(idx, data));
   },
   onError(error, variables, onMutateResult, context) {
-    context.client.removeQueries({ queryKey: ["recipes", variables.id] });
-    context.client.setQueryData<Recipe[]>(
-      ["recipes"],
-      onMutateResult?.prevRecipes,
-    );
+    context.client.setQueryData(["recipes"], onMutateResult?.prevRecipes);
     toast.error("Failed to add recipe", { description: error.message });
   },
   onSettled(data, error, variables, onMutateResult, context) {
-    if (data) {
-      context.client.invalidateQueries({ queryKey: ["recipes", data.data.id] });
-    }
     context.client.invalidateQueries({ queryKey: ["recipes"] });
   },
 });
@@ -296,27 +283,21 @@ export const removeRecipeMutation = mutationOptions({
     return id;
   },
   async onMutate(id, context) {
-    context.client.cancelQueries({ queryKey: ["recipes", id] });
-    context.client.cancelQueries({ queryKey: ["recipes"] });
-    const prevRecipe = context.client.getQueryData<number>(["recipes", id]);
-    const prevRecipes = context.client.getQueryData<number[]>(["recipes"]);
-    context.client.setQueryData(["recipes", id], undefined);
-    context.client.setQueryData<number[]>(
-      ["recipes"],
-      (ids: number[] | undefined) => ids?.filter((it) => it !== id),
+    await context.client.cancelQueries({ queryKey: ["recipes"] });
+    const prevRecipes = context.client.getQueryData<Recipe[]>(["recipes"]);
+    context.client.setQueryData<Recipe[]>(["recipes"], (recipes) =>
+      recipes?.filter((it) => it.id !== id),
     );
-    return { prevRecipe, prevRecipes };
+    return { prevRecipes };
   },
   onError(error, id, onMutateResult, context) {
-    context.client.setQueryData(["recipes", id], onMutateResult?.prevRecipe);
-    context.client.setQueryData<number[]>(
+    context.client.setQueryData<Recipe[]>(
       ["recipes"],
       onMutateResult?.prevRecipes,
     );
-    // TODO: Notify user.
+    toast.error("Failed to remove recipe", { description: error.message });
   },
-  async onSettled(data, error, id, onMutateResult, context) {
-    context.client.invalidateQueries({ queryKey: ["recipes", id] });
+  onSettled(data, error, id, onMutateResult, context) {
     context.client.invalidateQueries({ queryKey: ["recipes"] });
   },
 });
@@ -325,24 +306,21 @@ export const updateRecipeMutation = mutationOptions({
   mutationFn: ({ id, ...rest }: Recipe) =>
     api.put<Recipe>(`/recipes/${id}`, rest),
   async onMutate(value, context) {
-    await context.client.cancelQueries({ queryKey: ["recipes", value.id] });
-    const prevRecipe = context.client.getQueryData<Recipe>([
-      "recipes",
-      value.id,
-    ]);
-    context.client.setQueryData(["recipes", value.id], value);
-    return prevRecipe;
+    await context.client.cancelQueries({ queryKey: ["recipes"] });
+    const prevRecipes = context.client.getQueryData<Recipe[]>(["recipes"]);
+    const idx = prevRecipes!.findIndex((it) => it.id === value.id);
+    context.client.setQueryData(
+      ["recipes"],
+      prevRecipes?.with(idx, { ...prevRecipes[idx], ...value }),
+    );
+    return prevRecipes;
   },
-  onSuccess(data, variables, context) {
-    toast.success("Recipe updated");
-  },
-  onError(error, { id }, prevRecipe, context) {
-    context.client.setQueryData(["recipes", id], prevRecipe);
+  onError(error, { id }, prevRecipes, context) {
+    context.client.setQueryData(["recipes"], prevRecipes);
     toast.error("Failed to update recipe", { description: error.message });
   },
   onSettled(data, error, { id }, prevRecipe, context) {
-    context.client.invalidateQueries({ queryKey: ["recipes", id] });
-    context.client.invalidateQueries({ queryKey: ["recipes"] });
+    //context.client.invalidateQueries({ queryKey: ["recipes"] });
   },
 });
 
@@ -407,6 +385,7 @@ function formatApiErrorDetail(error: unknown): string {
 
 export const generateAIRecipesMutation = mutationOptions({
   mutationKey: ["generateAIRecipes"],
+  retry: false,
   async mutationFn(input: string | File): Promise<AIResponseData> {
     if (typeof input === "string") {
       const ingredientList = input

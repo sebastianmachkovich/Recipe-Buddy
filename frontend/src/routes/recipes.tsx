@@ -44,7 +44,7 @@ function RecipesPage() {
     <RecipesPageGrid>
       <AddRecipeCard />
       {recipes?.map((it) => {
-        return <RecipeCard key={hashString(it.name)} recipeId={it.id} />;
+        return <RecipeCard key={hashString(it.name)} recipe={it} />;
       })}
     </RecipesPageGrid>
   );

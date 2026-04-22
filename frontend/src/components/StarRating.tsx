@@ -1,9 +1,9 @@
-import { useRecipe, useUpdateRecipe } from "@/hooks/queries";
+import { useUpdateRecipe } from "@/hooks/queries";
+import { Recipe } from "@/services/api";
 import { Star } from "lucide-react";
 import { useState } from "react";
 
-export function StarRating({ recipeId }: { recipeId: number }) {
-  const { data: recipe } = useRecipe(recipeId);
+export function StarRating({ recipe }: { recipe: Recipe }) {
   const { mutate: updateRecipe } = useUpdateRecipe();
   const [hovered, setHovered] = useState(false);
   const [hoveredRating, setHoveredRating] = useState(0);
