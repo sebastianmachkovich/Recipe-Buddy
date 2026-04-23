@@ -212,13 +212,11 @@ function SaveButton({ suggestion }: { suggestion: AIRecipeSuggestion }) {
     addRecipe(payload);
   }
 
+  const SavedIcon = wasSaved ? BookmarkCheck : Bookmark;
+
   return (
     <Button className="w-full" disabled={wasSaved} onClick={() => handleAdd()}>
-      {wasSaved ? (
-        <BookmarkCheck className="h-4 w-4 mr-2" />
-      ) : (
-        <Bookmark className="h-4 w-4 mr-2" />
-      )}
+      <SavedIcon className="h-4 w-4 mr-2" />
       {wasSaved ? "Saved" : "Save"}
     </Button>
   );
