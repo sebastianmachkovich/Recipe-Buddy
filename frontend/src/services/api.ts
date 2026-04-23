@@ -3,8 +3,10 @@
 import axios, { isAxiosError } from "axios";
 import { router } from "@/main";
 import {
+  MutationFunctionContext,
   mutationOptions,
   QueryClient,
+  QueryKey,
   queryOptions,
 } from "@tanstack/react-query";
 import { redirect, UseNavigateResult } from "@tanstack/react-router";
@@ -248,79 +250,86 @@ export const logoutMutation = mutationOptions({
   },
 });
 
-export const addRecipeMutation = mutationOptions({
+function optimisticMutation<MutParams, MutResult, CachedType>(opts: {
+  queryKey: QueryKey;
+  mutationFn: (value: MutParams) => Promise<MutResult>;
+  updateFn: (fields: MutParams, snapshot: CachedType) => CachedType;
+  onError?: (
+    error: Error,
+    variables: MutParams,
+    onMutateResult: { snapshot: CachedType; newValue?: CachedType } | undefined,
+    context: MutationFunctionContext,
+  ) => void;
+  onSuccess?: (
+    mutationFnResult: MutResult,
+    mutationInput: MutParams,
+    onMutateResult: { snapshot: CachedType; newValue?: CachedType },
+    context: MutationFunctionContext,
+  ) => any;
+}) {
+  const { queryKey, mutationFn, updateFn, onError: onError_, onSuccess } = opts;
+  return mutationOptions({
+    mutationFn,
+    async onMutate(value, context) {
+      await context.client.cancelQueries({ queryKey });
+      const snapshot = context.client.getQueryData<CachedType>(queryKey);
+      if (!snapshot) throw new Error(`Invalid query key: ${queryKey}`);
+      const newValue = context.client.setQueryData<CachedType>(
+        queryKey,
+        updateFn(value, snapshot),
+      );
+      return { snapshot, newValue };
+    },
+    onError(error, variables, onMutateResult, context) {
+      context.client.setQueryData(queryKey, onMutateResult?.snapshot);
+      onError_?.(error, variables, onMutateResult, context);
+    },
+    onSuccess,
+    onSettled(data, error, variables, onMutateResult, context) {
+      // TODO: Eliminate this if we can get away with it.
+      //context.client.invalidateQueries({ queryKey });
+    },
+  });
+}
+
+export const addRecipeMutation = optimisticMutation({
+  queryKey: ["recipes"],
   mutationFn: (fields: RecipeWritePayload) =>
     api.post<Recipe>("/recipes/", fields),
-  async onMutate(value, context) {
-    await context.client.cancelQueries({ queryKey: ["recipes"] });
-    const prevRecipes = context.client.getQueryData<Recipe[]>(["recipes"]);
-    const newRecipes = context.client.setQueryData<Recipe[]>(
-      ["recipes"],
-      // Here, `value` is supposed to have its `id` field unset. Hence, we
-      // get a type error.
-      prevRecipes!.concat(value).sort((a, b) => a.name.localeCompare(b.name)),
-    );
-    return { prevRecipes, newRecipes };
-  },
-  onSuccess({ data }, variables, { newRecipes }, context) {
-    // We fill in the `id` field of the new recipe with the one returned by
-    // the server right here.
-    const idx = newRecipes!.findIndex((it) => it.id === data.id);
-    context.client.setQueryData(["recipes"], newRecipes!.with(idx, data));
-  },
-  onError(error, variables, onMutateResult, context) {
-    context.client.setQueryData(["recipes"], onMutateResult?.prevRecipes);
+  // Here, `fields` is supposed to have its `id` field undefined. Hence, we
+  // get a type error.
+  updateFn: (fields, snapshot: Recipe[]) =>
+    snapshot!.concat(fields).sort((a, b) => a.name.localeCompare(b.name)),
+  onError: (error) => {
     toast.error("Failed to add recipe", { description: error.message });
   },
-  onSettled(data, error, variables, onMutateResult, context) {
-    context.client.invalidateQueries({ queryKey: ["recipes"] });
+  onSuccess: ({ data }, variables, { newValue }, context) => {
+    // We fill in the `id` field of the new recipe with the one returned by
+    // the server right here.
+    const idx = newValue!.findIndex((it) => it.id === undefined);
+    context.client.setQueryData(["recipes"], newValue!.with(idx, data));
   },
 });
 
-export const removeRecipeMutation = mutationOptions({
-  async mutationFn(id: number) {
-    await api.delete(`/recipes/${id}`);
-    return id;
-  },
-  async onMutate(id, context) {
-    await context.client.cancelQueries({ queryKey: ["recipes"] });
-    const prevRecipes = context.client.getQueryData<Recipe[]>(["recipes"]);
-    context.client.setQueryData<Recipe[]>(["recipes"], (recipes) =>
-      recipes?.filter((it) => it.id !== id),
-    );
-    return { prevRecipes };
-  },
-  onError(error, id, onMutateResult, context) {
-    context.client.setQueryData<Recipe[]>(
-      ["recipes"],
-      onMutateResult?.prevRecipes,
-    );
+export const removeRecipeMutation = optimisticMutation({
+  queryKey: ["recipes"],
+  mutationFn: (id: number) => api.delete(`/recipes/${id}`),
+  updateFn: (id, snapshot: Recipe[]) => snapshot!.filter((it) => it.id !== id),
+  onError: (error) => {
     toast.error("Failed to remove recipe", { description: error.message });
   },
-  onSettled(data, error, id, onMutateResult, context) {
-    context.client.invalidateQueries({ queryKey: ["recipes"] });
-  },
 });
 
-export const updateRecipeMutation = mutationOptions({
+export const updateRecipeMutation = optimisticMutation({
+  queryKey: ["recipes"],
   mutationFn: ({ id, ...rest }: Recipe) =>
     api.put<Recipe>(`/recipes/${id}`, rest),
-  async onMutate(value, context) {
-    await context.client.cancelQueries({ queryKey: ["recipes"] });
-    const prevRecipes = context.client.getQueryData<Recipe[]>(["recipes"]);
-    const idx = prevRecipes!.findIndex((it) => it.id === value.id);
-    context.client.setQueryData(
-      ["recipes"],
-      prevRecipes?.with(idx, { ...prevRecipes[idx], ...value }),
-    );
-    return prevRecipes;
+  updateFn: (fields, snapshot: Recipe[]) => {
+    const idx = snapshot!.findIndex((it) => it.id === fields.id);
+    return snapshot!.with(idx, fields);
   },
-  onError(error, { id }, prevRecipes, context) {
-    context.client.setQueryData(["recipes"], prevRecipes);
+  onError: (error) => {
     toast.error("Failed to update recipe", { description: error.message });
-  },
-  onSettled(data, error, { id }, prevRecipe, context) {
-    //context.client.invalidateQueries({ queryKey: ["recipes"] });
   },
 });
 

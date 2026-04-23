@@ -30,4 +30,3 @@ export const useUpdateRecipe = () => useMutation(updateRecipeMutation, qc);
 export const useAIRecipes = () => useQuery(aiRecipesQuery, qc);
 export const useGenerateAIRecipes = () =>
   useMutation(generateAIRecipesMutation, qc);
-
