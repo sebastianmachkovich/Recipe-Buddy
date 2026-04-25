@@ -1,15 +1,12 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-  addRecipeMutation,
   generateAIRecipesMutation,
   allRecipesQuery,
   currentUserQuery,
   loginMutation,
   logoutMutation,
   qc,
-  removeRecipeMutation,
   signupMutation,
-  updateRecipeMutation,
   aiRecipesQuery,
 } from "@/services/api";
 
@@ -22,9 +19,7 @@ export const useLogout = () => useMutation(logoutMutation, qc);
 // Recipe Hooks
 export const useAllRecipes = (enabled: boolean = true) =>
   useQuery({ ...allRecipesQuery, enabled }, qc);
-export const useAddRecipe = () => useMutation(addRecipeMutation, qc);
-export const useRemoveRecipe = () => useMutation(removeRecipeMutation, qc);
-export const useUpdateRecipe = () => useMutation(updateRecipeMutation, qc);
+export { useAddRecipe, useRemoveRecipe, useUpdateRecipe } from "@/services/api";
 
 // AI Hooks
 export const useAIRecipes = () => useQuery(aiRecipesQuery, qc);

@@ -37,8 +37,8 @@ export function EditRecipeDialogProvider({
   recipe?: Recipe;
 }) {
   const { data: recipes } = useAllRecipes();
-  const { mutate: addRecipe } = useAddRecipe();
-  const { mutate: updateRecipe } = useUpdateRecipe();
+  const { addRecipe } = useAddRecipe();
+  const { updateRecipe } = useUpdateRecipe();
 
   const [name, setName] = useAtom(editRecipeContext.name);
   const [description, setDescription] = useAtom(editRecipeContext.description);

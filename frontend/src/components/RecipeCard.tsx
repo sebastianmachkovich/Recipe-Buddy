@@ -95,7 +95,7 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
 }
 
 export function RecipeCardFooter({ recipe }: { recipe: Recipe }) {
-  const { mutate: updateRecipe } = useUpdateRecipe();
+  const { updateRecipe } = useUpdateRecipe();
 
   return (
     <CardFooter className="w-full flex flex-row justify-between gap-2">

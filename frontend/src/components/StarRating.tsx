@@ -4,7 +4,7 @@ import { Star } from "lucide-react";
 import { useState } from "react";
 
 export function StarRating({ recipe }: { recipe: Recipe }) {
-  const { mutate: updateRecipe } = useUpdateRecipe();
+  const { updateRecipe } = useUpdateRecipe();
   const [hovered, setHovered] = useState(false);
   const [hoveredRating, setHoveredRating] = useState(0);
 

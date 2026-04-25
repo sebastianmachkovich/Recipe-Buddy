@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-query";
 import { redirect, UseNavigateResult } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { useOptimisticMutation } from "tanstack-query-optimistic-updates";
 
 const browserHost =
   typeof window !== "undefined" ? window.location.hostname : "localhost";
@@ -250,88 +251,104 @@ export const logoutMutation = mutationOptions({
   },
 });
 
-function optimisticMutation<MutParams, MutResult, CachedType>(opts: {
-  queryKey: QueryKey;
-  mutationFn: (value: MutParams) => Promise<MutResult>;
-  updateFn: (fields: MutParams, snapshot: CachedType) => CachedType;
-  onError?: (
-    error: Error,
-    variables: MutParams,
-    onMutateResult: { snapshot: CachedType; newValue?: CachedType } | undefined,
-    context: MutationFunctionContext,
-  ) => void;
-  onSuccess?: (
-    mutationFnResult: MutResult,
-    mutationInput: MutParams,
-    onMutateResult: { snapshot: CachedType; newValue?: CachedType },
-    context: MutationFunctionContext,
-  ) => any;
-}) {
-  const { queryKey, mutationFn, updateFn, onError: onError_, onSuccess } = opts;
-  return mutationOptions({
-    mutationFn,
-    async onMutate(value, context) {
-      await context.client.cancelQueries({ queryKey });
-      const snapshot = context.client.getQueryData<CachedType>(queryKey);
-      if (!snapshot) throw new Error(`Invalid query key: ${queryKey}`);
-      const newValue = context.client.setQueryData<CachedType>(
-        queryKey,
-        updateFn(value, snapshot),
-      );
-      return { snapshot, newValue };
+export function useAddRecipe() {
+  const { mutate: addRecipe } = useOptimisticMutation(
+    {
+      mutationFn: (fields: RecipeWritePayload) =>
+        api.post<Recipe>("/recipes/", fields),
+      onError(error) {
+        toast.error("Failed to add recipe", { description: error.message });
+      },
+      optimisticUpdateOptions: {
+        queryKey: ["recipes"],
+        getOptimisticState({
+          prevQueryData,
+          variables,
+        }: {
+          prevQueryData: Recipe[];
+          variables: RecipeWritePayload;
+        }) {
+          if (!prevQueryData) return [];
+          console.log(prevQueryData);
+          // Despite the type error, `fields` is supposed to have its `id` field undefined here.
+          return prevQueryData
+            .concat(variables)
+            .sort((a, b) => a.name.localeCompare(b.name));
+        },
+      },
+      onSuccess: ({ data }, variables, { prevQueryData }) => {
+        // We fill in the `id` field of the new recipe with the one returned by
+        // the server right here.
+        qc.setQueryData(["recipes"], (prev: Recipe[]) =>
+          prev.with(
+            prev.findIndex((it) => it.id === undefined),
+            data,
+          ),
+        );
+      },
     },
-    onError(error, variables, onMutateResult, context) {
-      context.client.setQueryData(queryKey, onMutateResult?.snapshot);
-      onError_?.(error, variables, onMutateResult, context);
-    },
-    onSuccess,
-    onSettled(data, error, variables, onMutateResult, context) {
-      // TODO: Eliminate this if we can get away with it.
-      //context.client.invalidateQueries({ queryKey });
-    },
-  });
+    qc,
+  );
+  return { addRecipe };
 }
 
-export const addRecipeMutation = optimisticMutation({
-  queryKey: ["recipes"],
-  mutationFn: (fields: RecipeWritePayload) =>
-    api.post<Recipe>("/recipes/", fields),
-  // Here, `fields` is supposed to have its `id` field undefined. Hence, we
-  // get a type error.
-  updateFn: (fields, snapshot: Recipe[]) =>
-    snapshot!.concat(fields).sort((a, b) => a.name.localeCompare(b.name)),
-  onError: (error) => {
-    toast.error("Failed to add recipe", { description: error.message });
-  },
-  onSuccess: ({ data }, variables, { newValue }, context) => {
-    // We fill in the `id` field of the new recipe with the one returned by
-    // the server right here.
-    const idx = newValue!.findIndex((it) => it.id === undefined);
-    context.client.setQueryData(["recipes"], newValue!.with(idx, data));
-  },
-});
+export function useRemoveRecipe() {
+  const { mutate: removeRecipe } = useOptimisticMutation(
+    {
+      mutationFn: (id: number) => api.delete(`/recipes/${id}`),
+      onError(error) {
+        toast.error("Failed to remove recipe", { description: error.message });
+      },
+      optimisticUpdateOptions: {
+        queryKey: ["recipes"],
+        getOptimisticState({
+          prevQueryData,
+          variables,
+        }: {
+          prevQueryData: Recipe[];
+          variables: number;
+        }) {
+          if (!prevQueryData) return [];
+          return prevQueryData.filter((it) => it.id !== variables);
+        },
+      },
+    },
+    qc,
+  );
+  return { removeRecipe };
+}
 
-export const removeRecipeMutation = optimisticMutation({
-  queryKey: ["recipes"],
-  mutationFn: (id: number) => api.delete(`/recipes/${id}`),
-  updateFn: (id, snapshot: Recipe[]) => snapshot!.filter((it) => it.id !== id),
-  onError: (error) => {
-    toast.error("Failed to remove recipe", { description: error.message });
-  },
-});
-
-export const updateRecipeMutation = optimisticMutation({
-  queryKey: ["recipes"],
-  mutationFn: ({ id, ...rest }: Recipe) =>
-    api.put<Recipe>(`/recipes/${id}`, rest),
-  updateFn: (fields, snapshot: Recipe[]) => {
-    const idx = snapshot!.findIndex((it) => it.id === fields.id);
-    return snapshot!.with(idx, fields);
-  },
-  onError: (error) => {
-    toast.error("Failed to update recipe", { description: error.message });
-  },
-});
+export function useUpdateRecipe() {
+  const { mutate: updateRecipe } = useOptimisticMutation(
+    {
+      mutationFn: ({ id, ...rest }: Recipe) =>
+        api.put<Recipe>(`/recipes/${id}`, rest),
+      onError(error) {
+        toast.error("Failed to update recipe", { description: error.message });
+      },
+      optimisticUpdateOptions: {
+        queryKey: ["recipes"],
+        getOptimisticState({
+          prevQueryData,
+          variables,
+        }: {
+          prevQueryData: Recipe[];
+          variables: Recipe;
+        }) {
+          if (!prevQueryData) return [];
+          const idx = prevQueryData.findIndex((it) => it.id === variables.id);
+          const result = prevQueryData.with(idx, variables);
+          if (prevQueryData[idx].name !== result[idx].name) {
+            result.sort((a, b) => a.name.localeCompare(b.name));
+          }
+          return result;
+        },
+      },
+    },
+    qc,
+  );
+  return { updateRecipe };
+}
 
 export const allRecipesQuery = queryOptions({
   queryKey: ["recipes"],

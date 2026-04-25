@@ -23,7 +23,7 @@ export function DeleteRecipeButton({
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) {
   const name = useAtomValue(erc.name);
-  const { mutate: removeRecipe } = useRemoveRecipe();
+  const { removeRecipe } = useRemoveRecipe();
 
   // Deletes the recipe from the list and closes the dialog.
   function handleDeleteRecipe() {

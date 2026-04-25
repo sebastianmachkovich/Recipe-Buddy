@@ -70,7 +70,7 @@ export function PlanSidebar() {
 }
 
 function EditRecipeSidebarMenuButton({ recipe }: { recipe: Recipe }) {
-  const { mutate: updateRecipe } = useUpdateRecipe();
+  const { updateRecipe } = useUpdateRecipe();
   return (
     <SidebarMenuItem key={recipe.id}>
       <EditRecipeDialogProvider recipe={recipe}>
