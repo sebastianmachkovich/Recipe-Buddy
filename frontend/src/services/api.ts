@@ -71,9 +71,9 @@ export enum IngredientUnit {
 export interface Recipe {
   id: number;
   name: string;
-  description: string | null;
+  description: string;
   imgUrl?: string;
-  rating: number | null;
+  rating: number;
   inPlan: boolean;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
@@ -83,7 +83,7 @@ export interface RecipeIngredient {
   id: number;
   name: string;
   amount: number;
-  unit: string | null;
+  unit: IngredientUnit;
 }
 
 export interface RecipeStep {
