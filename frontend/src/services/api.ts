@@ -383,39 +383,6 @@ export const aiRecipesQuery = queryOptions<AIResponseData>({
   },
 });
 
-// FIXME: Error message normalization should be done on the backend because the
-//        frontend should not have to know the implementation details of the
-//        backend.  It is very easy to set up exception handlers in the server
-//        that take care of this automatically.
-function formatApiErrorDetail(error: unknown): string {
-  if (isAxiosError(error)) {
-    const detail = (error.response?.data as { detail?: unknown } | undefined)
-      ?.detail;
-    if (typeof detail === "string" && detail.trim()) {
-      return detail.trim();
-    }
-    if (Array.isArray(detail)) {
-      const parts = detail
-        .map((item) => {
-          if (typeof item === "string") return item;
-          if (typeof item === "object" && item !== null && "msg" in item) {
-            const msg = (item as { msg?: unknown }).msg;
-            return typeof msg === "string" ? msg : null;
-          }
-          return null;
-        })
-        .filter((item): item is string => Boolean(item));
-      if (parts.length > 0) {
-        return parts.join("; ");
-      }
-    }
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return "Something went wrong. Please try again.";
-}
-
 function* saveTmpIdGen() {
   let id = 0;
   while (true) {
@@ -442,7 +409,7 @@ function temporaryShimForInaccuratelyConvertingSuggestionsToRecipes(
       id: index,
       name: ingredient,
       amount: 1,
-      unit: null,
+      unit: IngredientUnit.unit,
     })),
     steps: suggestion.steps.map((step, index) => ({
       id: index,
@@ -504,7 +471,8 @@ export const generateAIRecipesMutation = mutationOptions({
     context.client.invalidateQueries({ queryKey: ["aiRecipes"] });
   },
   onError(error, variables) {
-    const description = formatApiErrorDetail(error);
+    const description =
+      error.message ?? "Something went wrong. Please try again.";
     const title =
       variables instanceof File
         ? "Could not use this photo"

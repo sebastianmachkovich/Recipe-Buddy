@@ -1,6 +1,6 @@
 """Recipe Buddy FastAPI Application - Structured Setup."""
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -37,7 +37,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     msg = "; ".join([err.msg for err in exc.errors()])
     return JSONResponse(
         status_code=422,
-        content={"detail": msg},
+        content={"message": msg},
+    )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": exc.detail},
     )
 
 @app.get("/")
