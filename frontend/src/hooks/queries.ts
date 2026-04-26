@@ -25,3 +25,4 @@ export { useAddRecipe, useRemoveRecipe, useUpdateRecipe } from "@/services/api";
 export const useAIRecipes = () => useQuery(aiRecipesQuery, qc);
 export const useGenerateAIRecipes = () =>
   useMutation(generateAIRecipesMutation, qc);
+export { useSaveAIRecipe } from "@/services/api";

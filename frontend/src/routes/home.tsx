@@ -17,12 +17,11 @@ import {
   Upload,
 } from "lucide-react";
 import { ChangeEvent, useRef } from "react";
-import { AIRecipeSuggestion, validateAuth } from "@/services/api";
+import { Recipe, validateAuth } from "@/services/api";
 import {
-  useAddRecipe,
   useAIRecipes,
-  useAllRecipes,
   useGenerateAIRecipes,
+  useSaveAIRecipe,
 } from "@/hooks/queries";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -31,6 +30,9 @@ import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
 // State
 const imagePreviewUrlAtom = atom<string | undefined>(undefined);
 const ingredientsInputAtom = atom("");
+export const savedRecipesMappingAtom = atom<
+  { genId: number; savedId?: number }[]
+>([]);
 
 function HomePage() {
   const isNavigatingAway = useRouterState({
@@ -145,39 +147,35 @@ function AIResults() {
             </p>
           )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {recipes.recipes.map(
-              (recipe: AIRecipeSuggestion, index: number) => (
-                <Card key={`${recipe.name}-${index}`}>
-                  <CardHeader>
-                    <CardTitle>{recipe.name}</CardTitle>
-                    <CardDescription>{recipe.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="font-medium">Ingredients</p>
-                      <ul className="list-disc list-inside text-sm text-muted-foreground">
-                        {recipe.ingredients.map(
-                          (ingredient, ingredientIndex) => (
-                            <li key={`${ingredient}-${ingredientIndex}`}>
-                              {ingredient}
-                            </li>
-                          ),
-                        )}
-                      </ul>
-                    </div>
-                    <div>
-                      <p className="font-medium">Steps</p>
-                      <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
-                        {recipe.steps.map((step, stepIndex) => (
-                          <li key={`${stepIndex}-${step}`}>{step}</li>
-                        ))}
-                      </ol>
-                    </div>
-                    <SaveButton suggestion={recipe} />
-                  </CardContent>
-                </Card>
-              ),
-            )}
+            {recipes.recipes.map((recipe: Recipe, index: number) => (
+              <Card key={`${recipe.name}-${index}`}>
+                <CardHeader>
+                  <CardTitle>{recipe.name}</CardTitle>
+                  <CardDescription>{recipe.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="font-medium">Ingredients</p>
+                    <ul className="list-disc list-inside text-sm text-muted-foreground">
+                      {recipe.ingredients.map((ingredient, ingredientIndex) => (
+                        <li key={`${ingredient}-${ingredientIndex}`}>
+                          {ingredient.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-medium">Steps</p>
+                    <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
+                      {recipe.steps.map((step, stepIndex) => (
+                        <li key={`${stepIndex}-${step}`}>{step.description}</li>
+                      ))}
+                    </ol>
+                  </div>
+                  <SaveButton suggestion={recipe} />
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       )}
@@ -185,37 +183,18 @@ function AIResults() {
   );
 }
 
-function SaveButton({ suggestion }: { suggestion: AIRecipeSuggestion }) {
-  const { mutate: addRecipe, isSuccess: wasSaved } = useAddRecipe();
-
-  // TODO: This is not a correct way to handle this.  We need the AI to
-  //       generate real recipe objects with steps and ingredients.
-  function handleAdd() {
-    const payload = {
-      name: suggestion.name,
-      description: suggestion.description,
-      rating: 0,
-      inPlan: false,
-      ingredients: suggestion.ingredients.map((ingredient, index) => ({
-        id: index,
-        name: ingredient,
-        amount: 1,
-        unit: null,
-      })),
-      steps: suggestion.steps.map((step, index) => ({
-        id: index,
-        description: step,
-        time: null,
-      })),
-    };
-
-    addRecipe(payload);
-  }
-
+function SaveButton({ suggestion }: { suggestion: Recipe }) {
+  const { saveRecipe } = useSaveAIRecipe();
+  const savedRecipes = useAtomValue(savedRecipesMappingAtom);
+  const wasSaved = savedRecipes.some((it) => it.genId === suggestion.id);
   const SavedIcon = wasSaved ? BookmarkCheck : Bookmark;
 
   return (
-    <Button className="w-full" disabled={wasSaved} onClick={() => handleAdd()}>
+    <Button
+      className="w-full"
+      disabled={wasSaved}
+      onClick={() => saveRecipe(suggestion)}
+    >
       <SavedIcon className="h-4 w-4 mr-2" />
       {wasSaved ? "Saved" : "Save"}
     </Button>

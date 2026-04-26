@@ -3,15 +3,15 @@
 import axios, { isAxiosError } from "axios";
 import { router } from "@/main";
 import {
-  MutationFunctionContext,
   mutationOptions,
   QueryClient,
-  QueryKey,
   queryOptions,
 } from "@tanstack/react-query";
 import { redirect, UseNavigateResult } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useOptimisticMutation } from "tanstack-query-optimistic-updates";
+import { useAtom } from "jotai";
+import { savedRecipesMappingAtom } from "@/routes/home";
 
 const browserHost =
   typeof window !== "undefined" ? window.location.hostname : "localhost";
@@ -143,7 +143,7 @@ export interface AIImageRecipeResponse {
 }
 
 export interface AIResponseData {
-  recipes: AIRecipeSuggestion[];
+  recipes: Recipe[];
   detected_ingredients: string[];
   activeModelLabel: string;
 }
@@ -252,52 +252,59 @@ export const logoutMutation = mutationOptions({
 });
 
 export function useAddRecipe() {
-  const { mutate: addRecipe } = useOptimisticMutation(
-    {
-      mutationFn: (fields: RecipeWritePayload) =>
-        api.post<Recipe>("/recipes/", fields),
-      onError(error) {
-        toast.error("Failed to add recipe", { description: error.message });
-      },
-      optimisticUpdateOptions: {
-        queryKey: ["recipes"],
-        getOptimisticState({
-          prevQueryData,
-          variables,
-        }: {
-          prevQueryData: Recipe[];
-          variables: RecipeWritePayload;
-        }) {
-          if (!prevQueryData) return [];
-          console.log(prevQueryData);
-          // Despite the type error, `fields` is supposed to have its `id` field undefined here.
-          return prevQueryData
-            .concat(variables)
-            .sort((a, b) => a.name.localeCompare(b.name));
+  const { mutate: addRecipe, mutateAsync: addRecipeAsync } =
+    useOptimisticMutation(
+      {
+        mutationFn: (fields: RecipeWritePayload) =>
+          api.post<Recipe>("/recipes/", fields),
+        onError(error) {
+          toast.error("Failed to add recipe", { description: error.message });
+        },
+        optimisticUpdateOptions: {
+          queryKey: ["recipes"],
+          getOptimisticState({
+            prevQueryData,
+            variables,
+          }: {
+            prevQueryData: Recipe[];
+            variables: RecipeWritePayload;
+          }) {
+            if (!prevQueryData) return [];
+            // Despite the type error, `fields` is supposed to have its `id` field undefined here.
+            return prevQueryData
+              .concat(variables)
+              .sort((a, b) => a.name.localeCompare(b.name));
+          },
+        },
+        onSuccess: ({ data }, variables, { prevQueryData }) => {
+          // We fill in the `id` field of the new recipe with the one returned by
+          // the server right here.
+          qc.setQueryData(["recipes"], (prev: Recipe[]) =>
+            prev.with(
+              prev.findIndex((it) => it.id === undefined),
+              data,
+            ),
+          );
         },
       },
-      onSuccess: ({ data }, variables, { prevQueryData }) => {
-        // We fill in the `id` field of the new recipe with the one returned by
-        // the server right here.
-        qc.setQueryData(["recipes"], (prev: Recipe[]) =>
-          prev.with(
-            prev.findIndex((it) => it.id === undefined),
-            data,
-          ),
-        );
-      },
-    },
-    qc,
-  );
-  return { addRecipe };
+      qc,
+    );
+  return { addRecipe, addRecipeAsync };
 }
 
 export function useRemoveRecipe() {
+  const [savedRecipes, setSavedRecipes] = useAtom(savedRecipesMappingAtom);
   const { mutate: removeRecipe } = useOptimisticMutation(
     {
       mutationFn: (id: number) => api.delete(`/recipes/${id}`),
       onError(error) {
         toast.error("Failed to remove recipe", { description: error.message });
+      },
+      onSuccess(data, id, onMutateResult, context) {
+        const idx = savedRecipes.findIndex((it) => it.savedId === id);
+        if (idx >= 0) {
+          setSavedRecipes((prev) => prev.toSpliced(idx, 1));
+        }
       },
       optimisticUpdateOptions: {
         queryKey: ["recipes"],
@@ -409,6 +416,42 @@ function formatApiErrorDetail(error: unknown): string {
   return "Something went wrong. Please try again.";
 }
 
+function* saveTmpIdGen() {
+  let id = 0;
+  while (true) {
+    --id;
+    yield id;
+  }
+  return 0;
+}
+
+const saveTmpId = saveTmpIdGen();
+
+// TODO: This is not a correct way to handle this.  We need the AI to
+//       generate real recipe objects with steps and ingredients.
+function temporaryShimForInaccuratelyConvertingSuggestionsToRecipes(
+  suggestion: AIRecipeSuggestion,
+): Recipe {
+  return {
+    id: saveTmpId.next().value,
+    name: suggestion.name,
+    description: suggestion.description,
+    rating: 0,
+    inPlan: false,
+    ingredients: suggestion.ingredients.map((ingredient, index) => ({
+      id: index,
+      name: ingredient,
+      amount: 1,
+      unit: null,
+    })),
+    steps: suggestion.steps.map((step, index) => ({
+      id: index,
+      description: step,
+      time: undefined,
+    })),
+  };
+}
+
 export const generateAIRecipesMutation = mutationOptions({
   mutationKey: ["generateAIRecipes"],
   retry: false,
@@ -425,7 +468,9 @@ export const generateAIRecipesMutation = mutationOptions({
       return {
         detected_ingredients: [],
         activeModelLabel: response.data.model,
-        recipes: response.data.recipes,
+        recipes: response.data.recipes.map(
+          temporaryShimForInaccuratelyConvertingSuggestionsToRecipes,
+        ),
       };
     } else {
       const formData = new FormData();
@@ -444,7 +489,9 @@ export const generateAIRecipesMutation = mutationOptions({
       return {
         detected_ingredients: response.data.detected_ingredients,
         activeModelLabel: `${response.data.vision_model} → ${response.data.recipe_model}`,
-        recipes: response.data.recipes,
+        recipes: response.data.recipes.map(
+          temporaryShimForInaccuratelyConvertingSuggestionsToRecipes,
+        ),
       };
     }
   },
@@ -468,3 +515,41 @@ export const generateAIRecipesMutation = mutationOptions({
     context.client.setQueryData<AIResponseData>(["aiRecipes"], data);
   },
 });
+
+export function useSaveAIRecipe() {
+  const [savedRecipes, setSavedRecipes] = useAtom(savedRecipesMappingAtom);
+  const { addRecipeAsync } = useAddRecipe();
+  const { mutate: saveRecipe } = useOptimisticMutation(
+    {
+      mutationFn: async ({ id, ...recipe }: Recipe) =>
+        await addRecipeAsync(recipe),
+      onMutate(variables, context) {
+        setSavedRecipes((prev) => [...prev, { genId: variables.id }]);
+        return { prevQueryData: variables };
+      },
+      onSuccess({ data }, oldRecipe, onMutateResult, context) {
+        const idx = savedRecipes.findIndex((it) => it.genId === oldRecipe.id);
+        setSavedRecipes((prev) =>
+          prev.with(idx, { genId: oldRecipe.id, savedId: data.id }),
+        );
+      },
+      optimisticUpdateOptions: {
+        queryKey: ["aiRecipes"],
+        getOptimisticState({
+          prevQueryData,
+          variables: recipe,
+        }): AIResponseData {
+          const idx = prevQueryData!.recipes.findIndex(
+            (it) => it.name === recipe.name,
+          );
+          return {
+            ...prevQueryData,
+            recipes: prevQueryData.recipes.with(idx, { ...recipe }),
+          };
+        },
+      },
+    },
+    qc,
+  );
+  return { saveRecipe };
+}
