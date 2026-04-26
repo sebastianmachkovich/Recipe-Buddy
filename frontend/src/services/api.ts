@@ -215,7 +215,7 @@ export const loginMutation = mutationOptions({
     await context.client.invalidateQueries({ queryKey: ["recipes"] });
   },
   onError(error, payload, onMutateResult, context) {
-    // TODO: Notify user.
+    toast.error("Failed to login", { description: error.message });
   },
 });
 
@@ -233,7 +233,7 @@ export const signupMutation = mutationOptions({
     await context.client.invalidateQueries({ queryKey: ["recipes"] });
   },
   onError(error, payload, onMutateResult, context) {
-    // TODO: Notify user.
+    toast.error("Failed to signup", { description: error.message });
   },
 });
 
@@ -247,7 +247,7 @@ export const logoutMutation = mutationOptions({
     context.client.removeQueries({ queryKey: ["recipes"] });
   },
   async onError(error, variables, onMutateResult, context) {
-    // TODO: Notify user.
+    toast.error("Failed to logout", { description: error.message });
   },
 });
 
