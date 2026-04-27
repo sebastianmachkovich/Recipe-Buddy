@@ -251,6 +251,40 @@ export const logoutMutation = mutationOptions({
   },
 });
 
+export const cuisineQuery = queryOptions({
+  queryKey: ["cuisine"],
+  async queryFn() {
+    const response = await api.get<string>("/cuisines/");
+    return response.data;
+  },
+});
+
+export const updateCuisineMutation = mutationOptions({
+  mutationFn: (info: string) => api.put<string>("/cuisines/", info),
+  onError(error) {
+    toast.error("Failed to update cuisine preferences", {
+      description: error.message,
+    });
+  },
+});
+
+export const dietaryQuery = queryOptions({
+  queryKey: ["dietary"],
+  async queryFn() {
+    const response = await api.get<string>("/dietary/");
+    return response.data;
+  },
+});
+
+export const updateDietaryMutation = mutationOptions({
+  mutationFn: (info: string) => api.put<string>("/dietary/", info),
+  onError(error) {
+    toast.error("Failed to update dietary restrictions", {
+      description: error.message,
+    });
+  },
+});
+
 export function useAddRecipe() {
   const { mutate: addRecipe, mutateAsync: addRecipeAsync } =
     useOptimisticMutation(
