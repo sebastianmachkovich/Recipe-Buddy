@@ -11,7 +11,7 @@ class RecipeIngredientPayload(BaseModel):
 class RecipeStepPayload(BaseModel):
     id: int
     description: str
-    time: dict[str, int] | None = None
+    time: int | None = None
 
 
 class RecipeWritePayload(BaseModel):

@@ -89,10 +89,7 @@ export interface RecipeIngredient {
 export interface RecipeStep {
   id: number;
   description: string;
-  time?: {
-    hours: number;
-    minutes: number;
-  };
+  time?: number;
 }
 
 export interface RecipeMatch {

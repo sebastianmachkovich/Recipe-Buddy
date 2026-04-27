@@ -136,6 +136,11 @@ function StepEditInput({
   onDelete: () => void;
   onChange: (updated: RecipeStep) => void;
 }) {
+  const timeString = item.time
+    ? item.time >= 60
+      ? `${item.time / 60}hr ${item.time % 60}min`
+      : `${item.time}min`
+    : null;
   return (
     <ReorderableInput payload={item} onDelete={onDelete}>
       <input
@@ -146,11 +151,7 @@ function StepEditInput({
         className="h-full flex-1 rounded-r-md border-0 bg-transparent px-3 text-sm outline-none focus-visible:ring-0"
       />
       <div className="h-5 w-px bg-border" />
-      {item.time ? (
-        <div>
-          {item.time.hours}hr {item.time.minutes}min
-        </div>
-      ) : null}
+      <div>{timeString}</div>
     </ReorderableInput>
   );
 }
