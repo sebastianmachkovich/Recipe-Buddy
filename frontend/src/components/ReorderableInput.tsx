@@ -102,7 +102,9 @@ function IngredientEditInput({
       <div className="h-5 w-px bg-border" />
       <Select
         value={item.unit ?? IngredientUnit.unit}
-        onValueChange={(value) => onChange({ ...item, unit: value })}
+        onValueChange={(value) =>
+          onChange({ ...item, unit: value as IngredientUnit })
+        }
       >
         <SelectTrigger className="h-full w-20 rounded-none border-0 bg-transparent dark:bg-transparent px-3 text-sm outline-none focus:ring-0 shadow-none ">
           <SelectValue />

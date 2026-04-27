@@ -59,7 +59,9 @@ export function PlanSidebar() {
           <Button
             variant="default"
             className="w-full"
-            onClick={() => navigate({ to: "/walkthrough" })}
+            onClick={() => {
+              navigate({ to: "/walkthrough" });
+            }}
           >
             Let Me Cook!
           </Button>

@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import axios, { isAxiosError } from "axios";
+import axios from "axios";
 import { router } from "@/main";
 import {
   mutationOptions,
