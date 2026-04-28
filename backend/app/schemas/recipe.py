@@ -10,6 +10,7 @@ class RecipeIngredientPayload(BaseModel):
 
 class RecipeStepPayload(BaseModel):
     id: int
+    type: str
     description: str
     time: int | None = None
 

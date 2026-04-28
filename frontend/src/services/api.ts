@@ -86,8 +86,11 @@ export interface RecipeIngredient {
   unit: IngredientUnit;
 }
 
+export type RecipeStepType = "prep" | "background" | "blocking" | "untimed";
+
 export interface RecipeStep {
   id: number;
+  type: RecipeStepType;
   description: string;
   time?: number;
 }
