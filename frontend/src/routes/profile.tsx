@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   useCuisine,
@@ -10,6 +11,7 @@ import {
 import { validateAuth } from "@/services/api";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 function ProfilePage() {
   const { data: user, isLoading } = useCurrentUser();
@@ -61,8 +63,13 @@ function PreferenceEntry({
   type: "cuisine" | "dietary";
 }) {
   const { data, isLoading } = type === "cuisine" ? useCuisine() : useDietary();
-  const { mutate } =
+  const { mutate, isPending } =
     type === "cuisine" ? useUpdateCuisine() : useUpdateDietary();
+  const [value, setValue] = useState("");
+
+  useEffect(() => {
+    setValue(data ?? "");
+  }, [data]);
 
   return (
     <div>
@@ -70,14 +77,22 @@ function PreferenceEntry({
       {isLoading ? (
         <Skeleton className="w-full h-16" />
       ) : (
-        <Textarea
-          placeholder={placeholder}
-          onBlur={(e) => {
-            if (e.target.value !== data) mutate(e.target.value);
-          }}
-        >
-          {data ?? ""}
-        </Textarea>
+        <div className="space-y-3">
+          <Textarea
+            placeholder={placeholder}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+          />
+          <div>
+            <Button
+              type="button"
+              onClick={() => mutate(value)}
+              disabled={isPending || value === (data ?? "")}
+            >
+              {isPending ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );

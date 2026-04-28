@@ -23,6 +23,7 @@ import {
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useLogout } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
+import { cuisineQuery, dietaryQuery, qc } from "@/services/api";
 
 // Null item is a spacer.
 const sidebarItems = [
@@ -62,9 +63,16 @@ function AppSidebarButton({
   icon: React.ReactNode;
   route: string;
 }) {
+  const handleClick = () => {
+    if (route === "/profile") {
+      void qc.prefetchQuery(cuisineQuery);
+      void qc.prefetchQuery(dietaryQuery);
+    }
+  };
+
   return (
     <SidebarMenuItem key={route}>
-      <Link to={route}>
+      <Link to={route} onClick={handleClick}>
         <SidebarMenuButton tooltip={label} className="cursor-pointer">
           {icon}
         </SidebarMenuButton>
