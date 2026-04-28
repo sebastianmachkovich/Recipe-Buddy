@@ -114,14 +114,9 @@ export interface PantryItem {
   updated_at: string | null;
 }
 
-export interface AIRecipeSuggestion {
-  name: string;
-  description: string;
-  ingredients: string[];
-  steps: string[];
-  prep_time_minutes: number | null;
-  cook_time_minutes: number | null;
-}
+// AI-generated recipes use the same shape as a saved `Recipe`, minus the
+// server-assigned `id` (the client mints a temporary id when consuming).
+export type AIRecipe = Omit<Recipe, "id">;
 
 export interface AIRecipeRequest {
   ingredients: string[] | string;
@@ -131,13 +126,13 @@ export interface AIRecipeRequest {
 }
 
 export interface AIRecipeResponse {
-  recipes: AIRecipeSuggestion[];
+  recipes: AIRecipe[];
   model: string;
 }
 
 export interface AIImageRecipeResponse {
   detected_ingredients: string[];
-  recipes: AIRecipeSuggestion[];
+  recipes: AIRecipe[];
   vision_model: string;
   recipe_model: string;
 }
@@ -251,16 +246,25 @@ export const logoutMutation = mutationOptions({
   },
 });
 
+export interface Preference {
+  value: string;
+}
+
 export const cuisineQuery = queryOptions({
   queryKey: ["cuisine"],
   async queryFn() {
-    const response = await api.get<string>("/cuisines/");
+    const response = await api.get<Preference>("/cuisines/");
     return response.data;
   },
 });
 
 export const updateCuisineMutation = mutationOptions({
-  mutationFn: (info: string) => api.put<string>("/cuisines/", info),
+  mutationFn: (value: string) =>
+    api.put<Preference>("/cuisines/", { value }),
+  onSuccess({ data }, _variables, _onMutateResult, context) {
+    context.client.setQueryData(["cuisine"], data);
+    toast.success("Cuisine preferences saved");
+  },
   onError(error) {
     toast.error("Failed to update cuisine preferences", {
       description: error.message,
@@ -271,13 +275,18 @@ export const updateCuisineMutation = mutationOptions({
 export const dietaryQuery = queryOptions({
   queryKey: ["dietary"],
   async queryFn() {
-    const response = await api.get<string>("/dietary/");
+    const response = await api.get<Preference>("/dietary/");
     return response.data;
   },
 });
 
 export const updateDietaryMutation = mutationOptions({
-  mutationFn: (info: string) => api.put<string>("/dietary/", info),
+  mutationFn: (value: string) =>
+    api.put<Preference>("/dietary/", { value }),
+  onSuccess({ data }, _variables, _onMutateResult, context) {
+    context.client.setQueryData(["dietary"], data);
+    toast.success("Dietary preferences saved");
+  },
   onError(error) {
     toast.error("Failed to update dietary restrictions", {
       description: error.message,
@@ -428,28 +437,13 @@ function* saveTmpIdGen() {
 
 const saveTmpId = saveTmpIdGen();
 
-// TODO: This is not a correct way to handle this.  We need the AI to
-//       generate real recipe objects with steps and ingredients.
-function temporaryShimForInaccuratelyConvertingSuggestionsToRecipes(
-  suggestion: AIRecipeSuggestion,
-): Recipe {
+// The AI endpoint already returns Recipe-shaped objects (minus id).
+// All we need to do client-side is mint a temporary id so React Query and the
+// rest of the recipe UI can treat them like any other Recipe.
+function aiRecipeToRecipe(recipe: AIRecipe): Recipe {
   return {
     id: saveTmpId.next().value,
-    name: suggestion.name,
-    description: suggestion.description,
-    rating: 0,
-    inPlan: false,
-    ingredients: suggestion.ingredients.map((ingredient, index) => ({
-      id: index,
-      name: ingredient,
-      amount: 1,
-      unit: IngredientUnit.unit,
-    })),
-    steps: suggestion.steps.map((step, index) => ({
-      id: index,
-      description: step,
-      time: undefined,
-    })),
+    ...recipe,
   };
 }
 
@@ -469,9 +463,7 @@ export const generateAIRecipesMutation = mutationOptions({
       return {
         detected_ingredients: [],
         activeModelLabel: response.data.model,
-        recipes: response.data.recipes.map(
-          temporaryShimForInaccuratelyConvertingSuggestionsToRecipes,
-        ),
+        recipes: response.data.recipes.map(aiRecipeToRecipe),
       };
     } else {
       const formData = new FormData();
@@ -490,9 +482,7 @@ export const generateAIRecipesMutation = mutationOptions({
       return {
         detected_ingredients: response.data.detected_ingredients,
         activeModelLabel: `${response.data.vision_model} → ${response.data.recipe_model}`,
-        recipes: response.data.recipes.map(
-          temporaryShimForInaccuratelyConvertingSuggestionsToRecipes,
-        ),
+        recipes: response.data.recipes.map(aiRecipeToRecipe),
       };
     }
   },

@@ -10,7 +10,129 @@ from dotenv import load_dotenv
 from fastapi import HTTPException, UploadFile
 from pydantic import ValidationError
 
-from app.schemas.ai import AIRecipe, AIRecipeRequest, AIRecipeResponse
+from app.schemas.ai import (
+    AIRecipe,
+    AIRecipeIngredient,
+    AIRecipeRequest,
+    AIRecipeResponse,
+    AIRecipeStep,
+    AIRecipeTime,
+)
+
+
+# Allowed unit values mirror the frontend `IngredientUnit` enum.
+ALLOWED_RECIPE_UNITS: tuple[str, ...] = (
+    "unit",
+    "L",
+    "mL",
+    "g",
+    "kg",
+    "oz",
+    "tsp",
+    "Tbsp",
+    "fl oz",
+    "cup",
+    "pt",
+    "qt",
+    "gal",
+)
+_LOWERED_UNITS = {value.lower(): value for value in ALLOWED_RECIPE_UNITS}
+
+
+def _normalize_unit(raw: Any) -> str:
+    if isinstance(raw, str):
+        candidate = raw.strip()
+        if not candidate:
+            return "unit"
+        return _LOWERED_UNITS.get(candidate.lower(), "unit")
+    return "unit"
+
+
+def _coerce_amount(raw: Any) -> float:
+    if isinstance(raw, (int, float)) and raw > 0:
+        return float(raw)
+    if isinstance(raw, str):
+        try:
+            value = float(raw.strip())
+        except ValueError:
+            return 1.0
+        return value if value > 0 else 1.0
+    return 1.0
+
+
+def _coerce_time(raw: Any) -> AIRecipeTime | None:
+    if not isinstance(raw, dict):
+        return None
+    hours_raw = raw.get("hours", 0)
+    minutes_raw = raw.get("minutes", 0)
+    try:
+        hours = max(0, int(hours_raw))
+    except (TypeError, ValueError):
+        hours = 0
+    try:
+        minutes = max(0, int(minutes_raw))
+    except (TypeError, ValueError):
+        minutes = 0
+    if hours == 0 and minutes == 0:
+        return None
+    return AIRecipeTime(hours=hours, minutes=minutes)
+
+
+def _coerce_recipe(raw: Any) -> AIRecipe | None:
+    if not isinstance(raw, dict):
+        return None
+    name = str(raw.get("name", "")).strip()
+    description = str(raw.get("description", "")).strip()
+    if not name:
+        return None
+
+    ingredients_raw = raw.get("ingredients") or []
+    ingredients: list[AIRecipeIngredient] = []
+    for index, item in enumerate(ingredients_raw):
+        if isinstance(item, dict):
+            ingredient_name = str(item.get("name", "")).strip()
+            if not ingredient_name:
+                continue
+            ingredients.append(
+                AIRecipeIngredient(
+                    id=index,
+                    name=ingredient_name,
+                    amount=_coerce_amount(item.get("amount", 1)),
+                    unit=_normalize_unit(item.get("unit")),
+                )
+            )
+        elif isinstance(item, str) and item.strip():
+            # Tolerate legacy bare-string entries from the LLM and adopt them as a name-only ingredient.
+            ingredients.append(
+                AIRecipeIngredient(id=index, name=item.strip(), amount=1.0, unit="unit")
+            )
+
+    steps_raw = raw.get("steps") or []
+    steps: list[AIRecipeStep] = []
+    for index, item in enumerate(steps_raw):
+        if isinstance(item, dict):
+            description_text = str(item.get("description", "")).strip()
+            if not description_text:
+                continue
+            steps.append(
+                AIRecipeStep(
+                    id=index,
+                    description=description_text,
+                    time=_coerce_time(item.get("time")),
+                )
+            )
+        elif isinstance(item, str) and item.strip():
+            steps.append(AIRecipeStep(id=index, description=item.strip(), time=None))
+
+    return AIRecipe(
+        name=name,
+        description=description,
+        imgUrl=None,
+        rating=0,
+        inPlan=False,
+        ingredients=ingredients,
+        steps=steps,
+    )
 
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=ENV_PATH)
@@ -155,12 +277,18 @@ async def generate_recipes_with_groq(payload: AIRecipeRequest, ingredients: list
         )
 
     model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+    allowed_units_csv = ", ".join(ALLOWED_RECIPE_UNITS)
     system_prompt = (
         "You are a recipe generator. "
-        "Always return valid JSON only with this exact schema: "
-        '{"recipes": [{"name": string, "description": string, "ingredients": string[], "steps": string[], '
-        '"prep_time_minutes": number|null, "cook_time_minutes": number|null}]}. '
-        "Do not include markdown, comments, or extra fields."
+        "Always return valid JSON only with this exact schema, no markdown, comments, or extra fields:\n"
+        '{"recipes": ['
+        '{"name": string, "description": string, '
+        '"ingredients": [{"name": string, "amount": number, "unit": string}], '
+        '"steps": [{"description": string, "time": {"hours": integer, "minutes": integer} | null}]'
+        "}]}\n"
+        f'"unit" MUST be one of: {allowed_units_csv}. Use "unit" when no other fits. '
+        '"amount" is a positive number (default 1). '
+        '"time" is the active duration of that step ({hours, minutes}) or null when negligible.'
     )
     user_prompt = (
         f"Generate up to {payload.max_recipes} practical recipes using these ingredients first: {', '.join(ingredients)}. "
@@ -203,15 +331,26 @@ async def generate_recipes_with_groq(payload: AIRecipeRequest, ingredients: list
 
     try:
         parsed = json.loads(strip_markdown_fences(content))
-        validated = AIRecipeResponse(
-            recipes=[AIRecipe(**recipe) for recipe in parsed.get("recipes", [])],
-            model=model,
-        )
-    except (json.JSONDecodeError, ValidationError, TypeError) as exc:
+    except json.JSONDecodeError as exc:
         raise HTTPException(status_code=502, detail="LLM output was not valid recipe JSON.") from exc
 
-    if not validated.recipes:
+    raw_recipes = parsed.get("recipes") if isinstance(parsed, dict) else None
+    if not isinstance(raw_recipes, list):
+        raise HTTPException(status_code=502, detail="LLM output was not valid recipe JSON.")
+
+    coerced: list[AIRecipe] = []
+    for raw in raw_recipes:
+        recipe = _coerce_recipe(raw)
+        if recipe is not None:
+            coerced.append(recipe)
+
+    if not coerced:
         raise HTTPException(status_code=502, detail="No recipes returned by LLM provider.")
+
+    try:
+        validated = AIRecipeResponse(recipes=coerced, model=model)
+    except ValidationError as exc:
+        raise HTTPException(status_code=502, detail="LLM output was not valid recipe JSON.") from exc
 
     return validated
 

@@ -65,11 +65,12 @@ function PreferenceEntry({
   const { data, isLoading } = type === "cuisine" ? useCuisine() : useDietary();
   const { mutate, isPending } =
     type === "cuisine" ? useUpdateCuisine() : useUpdateDietary();
+  const savedValue = data?.value ?? "";
   const [value, setValue] = useState("");
 
   useEffect(() => {
-    setValue(data ?? "");
-  }, [data]);
+    setValue(savedValue);
+  }, [savedValue]);
 
   return (
     <div>
@@ -87,7 +88,7 @@ function PreferenceEntry({
             <Button
               type="button"
               onClick={() => mutate(value)}
-              disabled={isPending || value === (data ?? "")}
+              disabled={isPending || value === savedValue}
             >
               {isPending ? "Saving..." : "Save"}
             </Button>

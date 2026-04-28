@@ -1,3 +1,5 @@
+from typing import cast
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from app.dependencies import get_current_user
@@ -12,6 +14,16 @@ from app.services.ai_service import (
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
 
+def _resolve_preference(request_value: str | None, profile_value: object) -> str | None:
+    """Use the request value when explicitly provided; otherwise fall back to the user's saved profile preference."""
+    if request_value is not None and request_value.strip():
+        return request_value
+    saved = cast(str | None, profile_value)
+    if saved and saved.strip():
+        return saved
+    return None
+
+
 @router.post("/recipes", response_model=AIRecipeResponse)
 async def generate_recipes(
     payload: AIRecipeRequest,
@@ -20,6 +32,14 @@ async def generate_recipes(
     ingredients = normalize_ingredients(payload.ingredients)
     if not ingredients:
         raise HTTPException(status_code=400, detail="Please provide at least one ingredient.")
+
+    payload.cuisine_preference = _resolve_preference(
+        payload.cuisine_preference, current_user.cuisine_preference
+    )
+    payload.dietary_preference = _resolve_preference(
+        payload.dietary_preference, current_user.dietary_preference
+    )
+
     return await generate_recipes_with_groq(payload, ingredients)
 
 
@@ -39,8 +59,8 @@ async def generate_recipes_from_image(
     recipe_payload = AIRecipeRequest(
         ingredients=detected_ingredients,
         max_recipes=max_recipes,
-        cuisine_preference=cuisine_preference,
-        dietary_preference=dietary_preference,
+        cuisine_preference=_resolve_preference(cuisine_preference, current_user.cuisine_preference),
+        dietary_preference=_resolve_preference(dietary_preference, current_user.dietary_preference),
     )
     recipe_response = await generate_recipes_with_groq(recipe_payload, detected_ingredients)
 
