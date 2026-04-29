@@ -16,7 +16,6 @@ from app.schemas.ai import (
     AIRecipeRequest,
     AIRecipeResponse,
     AIRecipeStep,
-    AIRecipeTime,
 )
 
 
@@ -60,24 +59,6 @@ def _coerce_amount(raw: Any) -> float:
     return 1.0
 
 
-def _coerce_time(raw: Any) -> AIRecipeTime | None:
-    if not isinstance(raw, dict):
-        return None
-    hours_raw = raw.get("hours", 0)
-    minutes_raw = raw.get("minutes", 0)
-    try:
-        hours = max(0, int(hours_raw))
-    except (TypeError, ValueError):
-        hours = 0
-    try:
-        minutes = max(0, int(minutes_raw))
-    except (TypeError, ValueError):
-        minutes = 0
-    if hours == 0 and minutes == 0:
-        return None
-    return AIRecipeTime(hours=hours, minutes=minutes)
-
-
 def _coerce_recipe(raw: Any) -> AIRecipe | None:
     if not isinstance(raw, dict):
         return None
@@ -114,15 +95,20 @@ def _coerce_recipe(raw: Any) -> AIRecipe | None:
             description_text = str(item.get("description", "")).strip()
             if not description_text:
                 continue
+            # Extract type with a sensible default
+            step_type = str(item.get("type", "untimed")).strip()
+            if step_type not in ("prep", "blocking", "background", "untimed"):
+                step_type = "untimed"
             steps.append(
                 AIRecipeStep(
                     id=index,
+                    type=step_type,
                     description=description_text,
-                    time=_coerce_time(item.get("time")),
+                    time=item.get("time"),
                 )
             )
         elif isinstance(item, str) and item.strip():
-            steps.append(AIRecipeStep(id=index, description=item.strip(), time=None))
+            steps.append(AIRecipeStep(id=index, type="untimed", description=item.strip(), time=None))
 
     return AIRecipe(
         name=name,
@@ -284,11 +270,16 @@ async def generate_recipes_with_groq(payload: AIRecipeRequest, ingredients: list
         '{"recipes": ['
         '{"name": string, "description": string, '
         '"ingredients": [{"name": string, "amount": number, "unit": string}], '
-        '"steps": [{"description": string, "time": {"hours": integer, "minutes": integer} | null}]'
+        '"steps": [{"description": string, "type": string, "time": integer | null}]'
         "}]}\n"
         f'"unit" MUST be one of: {allowed_units_csv}. Use "unit" when no other fits. '
         '"amount" is a positive number (default 1). '
-        '"time" is the active duration of that step ({hours, minutes}) or null when negligible.'
+        '"time" is the active duration of that step (minutes) or null when negligible.'
+        '"type" is the type of step, one of "prep", "blocking", "background", "untimed".'
+        '"blocking" steps are short, timed steps that cannot be avoided or reordered.'
+        '"background" steps are steps that take a long time, but can be done concurrently'
+            ' with other steps (e.g., baking, chilling, etc.).'
+        '"untimed" steps are steps that do not have a fixed duration.'
     )
     user_prompt = (
         f"Generate up to {payload.max_recipes} practical recipes using these ingredients first: {', '.join(ingredients)}. "

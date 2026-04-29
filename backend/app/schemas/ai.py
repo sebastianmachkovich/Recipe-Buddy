@@ -8,15 +8,11 @@ class AIRecipeIngredient(BaseModel):
     unit: str = "unit"
 
 
-class AIRecipeTime(BaseModel):
-    hours: int = 0
-    minutes: int = 0
-
-
 class AIRecipeStep(BaseModel):
     id: int
+    type: str
     description: str
-    time: AIRecipeTime | None = None
+    time: int | None = None
 
 
 class AIRecipeRequest(BaseModel):
