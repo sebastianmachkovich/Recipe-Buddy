@@ -10,7 +10,6 @@ import { Button } from "./ui/button";
 import { Recipe, RecipeIngredient, RecipeStep } from "@/services/api";
 import { useState } from "react";
 import { ErrableTextInputField } from "./ErrableTextInputField";
-import { UnparsedTextInputFieldList } from "./UnparsedTextInputFieldList";
 import { ReorderableInputField } from "./ReorderableInput";
 import { DeleteRecipeButton } from "./DeleteRecipeButton";
 import { UploadImageHeader } from "./UploadImageHeader";
@@ -18,6 +17,7 @@ import { useAddRecipe, useAllRecipes, useUpdateRecipe } from "@/hooks/queries";
 import { atom, useAtom, useSetAtom } from "jotai";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
+import { toast } from "sonner";
 
 export const editRecipeContext = {
   name: atom(""),
@@ -90,13 +90,19 @@ export function EditRecipeDialogProvider({
       setDescriptionError("Description Required");
       hasErrors = true;
     }
+    ingredients.forEach((ingredient, i) => {
+      if (!ingredient.name) {
+        toast.error("Ingredient Name Required");
+        hasErrors = true;
+      }
+    });
+    steps.forEach((step, i) => {
+      if (!step.description) {
+        toast.error("Step Description Required");
+        hasErrors = true;
+      }
+    });
     if (hasErrors) return;
-
-    // Sends any ingredients or steps to the server to be parsed.
-    // TODO: This will block while we wait for the server to parse the
-    //       ingredients and steps.  The submit button's text should be
-    //       replaced with a spinner and the fields should be disabled.
-    //       What happens when we cancel the dialog?
 
     // Updates the recipe in the list if it exists, or creates a new one and
     // appends it to the list.
@@ -147,18 +153,8 @@ export function EditRecipeDialogProvider({
               valueAtom={editRecipeContext.description}
               errorMsg={descriptionError}
             />
-            <ReorderableInputField type="ingredients" />
-            <UnparsedTextInputFieldList
-              placeholder="Secret Sauce..."
-              listItemPlaceholder="Ingredient"
-              listAtom={editRecipeContext.newIngredients}
-            />
-            <ReorderableInputField type="steps" />
-            <UnparsedTextInputFieldList
-              placeholder="Bake until done."
-              listItemPlaceholder="Step"
-              listAtom={editRecipeContext.newSteps}
-            />
+            <ReorderableInputField itemsAtom={editRecipeContext.ingredients} />
+            <ReorderableInputField itemsAtom={editRecipeContext.steps} />
           </div>
           <DialogFooter className="pt-6">
             {recipe && <DeleteRecipeButton id={recipe.id} setOpen={setOpen} />}

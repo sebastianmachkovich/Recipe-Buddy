@@ -1,4 +1,9 @@
-import { IngredientUnit, RecipeIngredient, RecipeStep } from "@/services/api";
+import {
+  IngredientUnit,
+  RecipeIngredient,
+  RecipeStep,
+  RecipeStepType,
+} from "@/services/api";
 import {
   Select,
   SelectContent,
@@ -14,7 +19,15 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { GripVerticalIcon, X } from "lucide-react";
+import {
+  Clock,
+  GripVerticalIcon,
+  PlusIcon,
+  OctagonPause,
+  TimerOff,
+  Utensils,
+  X,
+} from "lucide-react";
 import { CSS } from "@dnd-kit/utilities";
 import {
   restrictToVerticalAxis,
@@ -29,8 +42,8 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { Field, FieldLabel } from "./ui/field";
+import { PrimitiveAtom, useAtom } from "jotai";
 import { editRecipeContext as erc } from "./EditRecipeDialogProvider";
-import { useAtom } from "jotai";
 
 function ReorderableInput({
   payload,
@@ -129,6 +142,13 @@ function IngredientEditInput({
   );
 }
 
+const iconMap = {
+  [RecipeStepType.prep]: <Utensils className="h-4 w-4" />,
+  [RecipeStepType.background]: <Clock className="h-4 w-4" />,
+  [RecipeStepType.blocking]: <OctagonPause className="h-4 w-4" />,
+  [RecipeStepType.untimed]: <TimerOff className="h-4 w-4" />,
+};
+
 function StepEditInput({
   item,
   onDelete,
@@ -138,13 +158,56 @@ function StepEditInput({
   onDelete: () => void;
   onChange: (updated: RecipeStep) => void;
 }) {
-  const timeString = item.time
-    ? item.time >= 60
-      ? `${item.time / 60}hr ${item.time % 60}min`
-      : `${item.time}min`
-    : null;
   return (
     <ReorderableInput payload={item} onDelete={onDelete}>
+      <Select
+        value={item.type ?? RecipeStepType.untimed}
+        onValueChange={(value) =>
+          onChange({ ...item, type: value as RecipeStepType })
+        }
+      >
+        <SelectTrigger className="h-full w-16 rounded-none border-0 bg-transparent dark:bg-transparent px-3 text-sm outline-none focus:ring-0 shadow-none ">
+          <SelectValue>
+            {iconMap[item.type ?? RecipeStepType.untimed]}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {Object.values(RecipeStepType).map((type) => (
+            <SelectItem key={type} value={type}>
+              {iconMap[type]}
+              {type}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <div className="h-5 w-px bg-border" />
+
+      {(item.type === RecipeStepType.blocking ||
+        item.type === RecipeStepType.background) && (
+        <>
+          <div className="relative w-20">
+            <input
+              type="number"
+              step="any"
+              placeholder="1"
+              value={item.time || undefined}
+              onChange={(e) =>
+                onChange({
+                  ...item,
+                  time: parseInt(e.target.value) || 0,
+                })
+              }
+              className="h-full w-full rounded-l-md border-0 bg-transparent pl-3 pr-10 text-sm outline-none focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            <span className="absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground pointer-events-none">
+              min
+            </span>
+          </div>
+          <div className="h-5 w-px bg-border" />
+        </>
+      )}
+
       <input
         type="text"
         placeholder="Step Description"
@@ -153,23 +216,18 @@ function StepEditInput({
         className="h-full flex-1 rounded-r-md border-0 bg-transparent px-3 text-sm outline-none focus-visible:ring-0"
       />
       <div className="h-5 w-px bg-border" />
-      <div>{timeString}</div>
     </ReorderableInput>
   );
 }
 
-export function ReorderableInputField<T extends "ingredients" | "steps">({
-  type,
+export function ReorderableInputField({
+  itemsAtom,
 }: {
-  type: T;
+  itemsAtom: PrimitiveAtom<RecipeIngredient[]> | PrimitiveAtom<RecipeStep[]>;
 }) {
-  const InputComponents = {
-    ingredients: IngredientEditInput,
-    steps: StepEditInput,
-  } as const;
-  const Component = InputComponents[type];
-  const isStep = type === "steps";
-  const [items, setItems] = useAtom(isStep ? erc.steps : erc.ingredients);
+  const isSteps = itemsAtom === erc.steps;
+  const Component = isSteps ? StepEditInput : IngredientEditInput;
+  const [items, setItems] = useAtom(itemsAtom);
 
   // Sensors for dragging the ingredient and step lists.
   const sensors = useSensors(useSensor(PointerSensor));
@@ -188,6 +246,31 @@ export function ReorderableInputField<T extends "ingredients" | "steps">({
     }
   }
 
+  // Adds an ingredient or step to their respective list.
+  function handleAdd() {
+    if (isSteps) {
+      setItems((prev) => [
+        ...prev,
+        {
+          id: Math.max(0, ...prev.map((it) => it.id)) + 1,
+          type: RecipeStepType.untimed,
+          description: "",
+          time: undefined,
+        },
+      ]);
+    } else {
+      setItems((prev) => [
+        ...prev,
+        {
+          id: Math.max(0, ...prev.map((it) => it.id)) + 1,
+          name: "",
+          amount: 1,
+          unit: IngredientUnit.unit,
+        },
+      ]);
+    }
+  }
+
   // Deletes an ingredient or step from their respective list.
   function handleDelete(id: number) {
     setItems((prev) => prev.filter((it) => it.id !== id));
@@ -200,7 +283,7 @@ export function ReorderableInputField<T extends "ingredients" | "steps">({
 
   return (
     <Field>
-      <FieldLabel>{isStep ? "Steps" : "Ingredients"}</FieldLabel>
+      <FieldLabel>{isSteps ? "Steps" : "Ingredients"}</FieldLabel>
       <div className="flex flex-col gap-3">
         <DndContext
           sensors={sensors}
@@ -222,6 +305,9 @@ export function ReorderableInputField<T extends "ingredients" | "steps">({
             ))}
           </SortableContext>
         </DndContext>
+        <Button variant="outline" onClick={() => handleAdd()}>
+          <PlusIcon className="h-4 w-4" />
+        </Button>
       </div>
     </Field>
   );

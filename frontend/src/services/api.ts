@@ -86,7 +86,12 @@ export interface RecipeIngredient {
   unit: IngredientUnit;
 }
 
-export type RecipeStepType = "prep" | "background" | "blocking" | "untimed";
+export enum RecipeStepType {
+  prep = "prep",
+  background = "background",
+  blocking = "blocking",
+  untimed = "untimed",
+}
 
 export interface RecipeStep {
   id: number;
