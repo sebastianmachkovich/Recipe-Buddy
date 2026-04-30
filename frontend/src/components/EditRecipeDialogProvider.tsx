@@ -78,25 +78,28 @@ export function EditRecipeDialogProvider({
   async function handleSubmit() {
     // Does basic input validation.
     let hasErrors = false;
-    if (!editRecipeContext.name) {
-      setNameError("Name Required");
+    if (!name) {
+      //setNameError("Name Required");
+      toast.error("Name Required");
       hasErrors = true;
     }
     if (recipe?.name !== name && recipes!.some((it) => it.name === name)) {
-      setNameError("Choose a Unique Name");
+      //setNameError("Choose a Unique Name");
+      toast.error("Choose a Unique Name")
       hasErrors = true;
     }
-    if (!editRecipeContext.description) {
-      setDescriptionError("Description Required");
+    if (!description) {
+      //setDescriptionError("Description Required");
+      toast.error("Description Required");
       hasErrors = true;
     }
-    ingredients.forEach((ingredient, i) => {
+    ingredients.forEach((ingredient) => {
       if (!ingredient.name) {
         toast.error("Ingredient Name Required");
         hasErrors = true;
       }
     });
-    steps.forEach((step, i) => {
+    steps.forEach((step) => {
       if (!step.description) {
         toast.error("Step Description Required");
         hasErrors = true;

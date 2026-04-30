@@ -174,8 +174,7 @@ classDiagram
     Recipe <|-- UserRecipeOwnership
     User <|-- UserRecipeOwnership
 
-    note "Backend entrypoint: backend/main.py includes app.api.router" as N1
-    N1 ..> RecipesRouter
-    N1 ..> PlanRouter
-    N1 ..> AuthRouter
-    N1 ..> AIRouter
+  note for RecipesRouter "Backend entrypoint: backend/main.py includes app.api.router"
+note for PlanRouter "Backend entrypoint: backend/main.py includes app.api.router"
+note for AuthRouter "Backend entrypoint: backend/main.py includes app.api.router"
+note for AIRouter "Backend entrypoint: backend/main.py includes app.api.router"
