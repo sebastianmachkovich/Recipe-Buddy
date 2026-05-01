@@ -9,7 +9,6 @@ import {
 import { Button } from "./ui/button";
 import { Recipe, RecipeIngredient, RecipeStep } from "@/services/api";
 import { useState } from "react";
-import { ErrableTextInputField } from "./ErrableTextInputField";
 import { ReorderableInputField } from "./ReorderableInput";
 import { DeleteRecipeButton } from "./DeleteRecipeButton";
 import { UploadImageHeader } from "./UploadImageHeader";
@@ -18,6 +17,7 @@ import { atom, useAtom, useSetAtom } from "jotai";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
+import { Field, FieldLabel } from "./ui/field";
 
 export const editRecipeContext = {
   name: atom(""),
@@ -52,12 +52,6 @@ export function EditRecipeDialogProvider({
   // to open the it, rather than a prop.
   const [open, setOpen] = useState(false);
 
-  // Error states for the form fields.
-  const [nameError, setNameError] = useState(undefined as string | undefined);
-  const [descriptionError, setDescriptionError] = useState(
-    undefined as string | undefined,
-  );
-
   // Opens the dialog if the trigger is clicked.
   function handleOpenChange(newOpen: boolean) {
     if (newOpen) {
@@ -67,8 +61,6 @@ export function EditRecipeDialogProvider({
       setImgUrl(recipe?.imgUrl ?? undefined);
       setSteps(recipe?.steps ?? []);
       setIngredients(recipe?.ingredients ?? []);
-      setNameError(undefined);
-      setDescriptionError(undefined);
       setNewIngredients([]);
       setNewSteps([]);
     }
@@ -79,17 +71,14 @@ export function EditRecipeDialogProvider({
     // Does basic input validation.
     let hasErrors = false;
     if (!name) {
-      //setNameError("Name Required");
       toast.error("Name Required");
       hasErrors = true;
     }
     if (recipe?.name !== name && recipes!.some((it) => it.name === name)) {
-      //setNameError("Choose a Unique Name");
-      toast.error("Choose a Unique Name")
+      toast.error("Choose a Unique Name");
       hasErrors = true;
     }
     if (!description) {
-      //setDescriptionError("Description Required");
       toast.error("Description Required");
       hasErrors = true;
     }
@@ -102,6 +91,13 @@ export function EditRecipeDialogProvider({
     steps.forEach((step) => {
       if (!step.description) {
         toast.error("Step Description Required");
+        hasErrors = true;
+      }
+      if (
+        (step.type === "background" || step.type === "blocking") &&
+        !step.time
+      ) {
+        toast.error("Step time Required");
         hasErrors = true;
       }
     });
@@ -142,20 +138,24 @@ export function EditRecipeDialogProvider({
           <DialogDescription className="hidden">Edit Recipe</DialogDescription>
           <UploadImageHeader />
           <div className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden min-h-0 px-3">
-            <ErrableTextInputField
-              kind={Input}
-              description="Name"
-              placeholder="Something Delicious"
-              valueAtom={editRecipeContext.name}
-              errorMsg={nameError}
-            />
-            <ErrableTextInputField
-              kind={Textarea}
-              description="Description"
-              placeholder="Its flavor was good, but it calls for too much lemon."
-              valueAtom={editRecipeContext.description}
-              errorMsg={descriptionError}
-            />
+            <Field>
+              <FieldLabel htmlFor="name-input">Name</FieldLabel>
+              <Input
+                id="name-input"
+                placeholder="Something Delicious"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="description-input">Description</FieldLabel>
+              <Textarea
+                id="description-input"
+                placeholder="Its flavor was good, but it calls for too much lemon."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </Field>
             <ReorderableInputField itemsAtom={editRecipeContext.ingredients} />
             <ReorderableInputField itemsAtom={editRecipeContext.steps} />
           </div>
