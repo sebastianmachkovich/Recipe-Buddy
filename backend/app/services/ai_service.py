@@ -97,7 +97,7 @@ def _coerce_recipe(raw: Any) -> AIRecipe | None:
                 continue
             # Extract type with a sensible default
             step_type = str(item.get("type", "untimed")).strip()
-            if step_type not in ("prep", "blocking", "background", "untimed"):
+            if step_type not in ("blocking", "background", "untimed"):
                 step_type = "untimed"
             steps.append(
                 AIRecipeStep(
@@ -275,7 +275,7 @@ async def generate_recipes_with_groq(payload: AIRecipeRequest, ingredients: list
         f'"unit" MUST be one of: {allowed_units_csv}. Use "unit" when no other fits. '
         '"amount" is a positive number (default 1). '
         '"time" is the active duration of that step (minutes) or null when negligible.'
-        '"type" is the type of step, one of "prep", "blocking", "background", "untimed".'
+        '"type" is the type of step, one of "blocking", "background", "untimed".'
         '"blocking" steps are short, timed steps that cannot be avoided or reordered.'
         '"background" steps are steps that take a long time, but can be done concurrently'
             ' with other steps (e.g., baking, chilling, etc.).'

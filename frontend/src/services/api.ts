@@ -45,13 +45,6 @@ api.interceptors.response.use(
   },
 );
 
-export interface Ingredient {
-  id: number;
-  name: string;
-  category: string | null;
-  created_at: string;
-}
-
 export enum IngredientUnit {
   unit = "unit",
   L = "L",
@@ -87,7 +80,6 @@ export interface RecipeIngredient {
 }
 
 export enum RecipeStepType {
-  prep = "prep",
   background = "background",
   blocking = "blocking",
   untimed = "untimed",
@@ -107,21 +99,10 @@ export interface RecipeMatch {
   matched_ingredients: string[];
 }
 
-export interface PantryItem {
-  id: number;
-  user_id: string;
-  ingredient_id: number;
-  quantity: string | null;
-  unit: string | null;
-  expiry_date: string | null;
-  ingredient: Ingredient;
-  created_at: string;
-  updated_at: string | null;
-}
-
 // AI-generated recipes use the same shape as a saved `Recipe`, minus the
 // server-assigned `id` (the client mints a temporary id when consuming).
 export type AIRecipe = Omit<Recipe, "id">;
+export type RecipeWritePayload = Omit<Recipe, "id">;
 
 export interface AIRecipeRequest {
   ingredients: string[] | string;
@@ -157,33 +138,6 @@ export interface AuthStatusResponse {
   authenticated: boolean;
   user: AuthUser | null;
 }
-
-export type RecipeWritePayload = Omit<Recipe, "id">;
-
-// // Ingredient API
-// export const ingredientsAPI = {
-//   getAll: (search?: string) =>
-//     api.get<Ingredient[]>("/ingredients/", { params: { search } }),
-//
-//   getById: (id: number) => api.get<Ingredient>(`/ingredients/${id}`),
-//
-//   create: (data: { name: string; category?: string }) =>
-//     api.post<Ingredient>("/ingredients/", data),
-// };
-
-// // Pantry API
-// export const pantryAPI = {
-//   getAll: () => api.get<PantryItem[]>("/pantry/"),
-//
-//   add: (data: {
-//     ingredient_id: number;
-//     quantity?: string;
-//     unit?: string;
-//     expiry_date?: string;
-//   }) => api.post<PantryItem>("/pantry/", data),
-//
-//   remove: (id: number) => api.delete(`/pantry/${id}`),
-// };
 
 export function validateAuth() {
   const expiresAt = sessionStorage.getItem("authExpiresAt");
@@ -264,8 +218,7 @@ export const cuisineQuery = queryOptions({
 });
 
 export const updateCuisineMutation = mutationOptions({
-  mutationFn: (value: string) =>
-    api.put<Preference>("/cuisines/", { value }),
+  mutationFn: (value: string) => api.put<Preference>("/cuisines/", { value }),
   onSuccess({ data }, _variables, _onMutateResult, context) {
     context.client.setQueryData(["cuisine"], data);
     toast.success("Cuisine preferences saved");
@@ -286,8 +239,7 @@ export const dietaryQuery = queryOptions({
 });
 
 export const updateDietaryMutation = mutationOptions({
-  mutationFn: (value: string) =>
-    api.put<Preference>("/dietary/", { value }),
+  mutationFn: (value: string) => api.put<Preference>("/dietary/", { value }),
   onSuccess({ data }, _variables, _onMutateResult, context) {
     context.client.setQueryData(["dietary"], data);
     toast.success("Dietary preferences saved");

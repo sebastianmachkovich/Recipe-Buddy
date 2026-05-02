@@ -16,7 +16,9 @@ import { EditRecipeDialogProvider } from "./EditRecipeDialogProvider";
 import { useAllRecipes, useUpdateRecipe } from "@/hooks/queries";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { Recipe } from "@/services/api";
+import { allRecipesQuery, qc, Recipe } from "@/services/api";
+import { setupWalkthrough } from "@/state/walkthrough";
+import { useState } from "react";
 
 export function PlanSidebar() {
   const shouldBeHidden = useRouterState({
@@ -26,6 +28,7 @@ export function PlanSidebar() {
   });
   const { data: recipes } = useAllRecipes(!shouldBeHidden);
   const navigate = useNavigate();
+  const [isStarting, setIsStarting] = useState(false);
 
   return (
     <SidebarProvider
@@ -59,11 +62,23 @@ export function PlanSidebar() {
           <Button
             variant="default"
             className="w-full"
-            onClick={() => {
-              navigate({ to: "/walkthrough" });
+            disabled={isStarting || !(recipes ?? []).some((it) => it.inPlan)}
+            onClick={async () => {
+              setIsStarting(true);
+              try {
+                const recipes = await qc.ensureQueryData(allRecipesQuery);
+                const plannedRecipes = recipes.filter((it) => it.inPlan);
+                if (plannedRecipes.length === 0) {
+                  return;
+                }
+                setupWalkthrough(plannedRecipes);
+                await navigate({ to: "/walkthrough" });
+              } finally {
+                setIsStarting(false);
+              }
             }}
           >
-            Let Me Cook!
+            {isStarting ? "Starting..." : "Let Me Cook!"}
           </Button>
         </SidebarFooter>
       </Sidebar>

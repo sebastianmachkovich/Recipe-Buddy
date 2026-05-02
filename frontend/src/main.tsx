@@ -5,6 +5,8 @@ import "./index.css";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
+import { Provider } from "jotai";
+import { walkthroughStore } from "@/state/walkthrough";
 
 // Create a new router instance
 export const router = createRouter({ routeTree });
@@ -22,7 +24,9 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
-      <RouterProvider router={router} />
+      <Provider store={walkthroughStore}>
+        <RouterProvider router={router} />
+      </Provider>
     </StrictMode>,
   );
 }

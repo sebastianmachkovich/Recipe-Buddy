@@ -143,7 +143,6 @@ function IngredientEditInput({
 }
 
 const iconMap = {
-  [RecipeStepType.prep]: <Utensils className="h-4 w-4" />,
   [RecipeStepType.background]: <Clock className="h-4 w-4" />,
   [RecipeStepType.blocking]: <OctagonPause className="h-4 w-4" />,
   [RecipeStepType.untimed]: <TimerOff className="h-4 w-4" />,
