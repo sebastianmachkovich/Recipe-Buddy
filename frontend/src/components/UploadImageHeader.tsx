@@ -46,7 +46,7 @@ export function UploadImageHeader() {
         </VisuallyHidden.Root>
         {imgUrl ? (
           <div
-            className="group relative aspect-4/3 w-[calc(100%+3rem)] max-w-none
+            className="group relative aspect-16/9 w-[calc(100%+3rem)] max-w-none
                        -mx-6 -mt-6 mb-4 rounded-t-lg
                        flex flex-col items-center justify-center gap-2
                        text-muted-foreground transition-colors
@@ -74,7 +74,7 @@ export function UploadImageHeader() {
           </div>
         ) : (
           <div
-            className="aspect-4/3 w-[calc(100%+3rem)] max-w-none
+            className="aspect-16/9 w-[calc(100%+3rem)] max-w-none
                        -mx-6 -mt-6 mb-4 rounded-t-lg
                        flex flex-col items-center justify-center gap-2
                        text-muted-foreground border-2 transition-colors
