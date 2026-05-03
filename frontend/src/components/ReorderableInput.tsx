@@ -68,6 +68,7 @@ function ReorderableInput({
       className="flex h-9 w-full items-center rounded-md border border-input dark:bg-input/30 shadow-sm"
       ref={setNodeRef}
       {...attributes}
+      //{...listeners}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
@@ -103,12 +104,8 @@ function IngredientEditInput({
         step="any"
         placeholder="1"
         value={item.amount || ""}
-        onChange={(e) =>
-          onChange({
-            ...item,
-            amount: parseFloat(e.target.value) || 0,
-          })
-        }
+        onChange={(e) => onChange({ ...item, amount: parseFloat(e.target.value) || 0 })}
+        onPointerDown={(e) => e.stopPropagation()}
         className="h-full w-16 rounded-l-md border-0 bg-transparent px-3 text-sm outline-none focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
       <div className="h-5 w-px bg-border" />
@@ -134,6 +131,7 @@ function IngredientEditInput({
         type="text"
         placeholder="Ingredient Name"
         value={item.name}
+        onPointerDown={(e) => e.stopPropagation()}
         onChange={(e) => onChange({ ...item, name: e.target.value })}
         className="h-full flex-1 rounded-r-md border-0 bg-transparent px-3 text-sm outline-none focus-visible:ring-0"
       />
@@ -190,12 +188,8 @@ function StepEditInput({
               step="any"
               placeholder="1"
               value={item.time || undefined}
-              onChange={(e) =>
-                onChange({
-                  ...item,
-                  time: parseInt(e.target.value) || 0,
-                })
-              }
+              onChange={(e) => onChange({ ...item, time: parseInt(e.target.value) || 0 })}
+              onPointerDown={(e) => e.stopPropagation()}
               className="h-full w-full rounded-l-md border-0 bg-transparent pl-3 pr-10 text-sm outline-none focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <span className="absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground pointer-events-none">
@@ -210,6 +204,7 @@ function StepEditInput({
         type="text"
         placeholder="Step Description"
         value={item.description}
+        onPointerDown={(e) => e.stopPropagation()}
         onChange={(e) => onChange({ ...item, description: e.target.value })}
         className="h-full flex-1 rounded-r-md border-0 bg-transparent px-3 text-sm outline-none focus-visible:ring-0"
       />
