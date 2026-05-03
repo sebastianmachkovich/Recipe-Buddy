@@ -68,13 +68,12 @@ function ReorderableInput({
       className="flex h-9 w-full items-center rounded-md border border-input dark:bg-input/30 shadow-sm"
       ref={setNodeRef}
       {...attributes}
-      {...listeners}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
       }}
     >
-      <GripVerticalIcon className="h-4 w-4" />
+      <GripVerticalIcon className="h-4 w-4 cursor-grab" {...listeners} />
       {children}
       <Button
         variant="ghost"
