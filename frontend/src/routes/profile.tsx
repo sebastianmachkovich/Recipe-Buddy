@@ -1,24 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   useCuisine,
   useCurrentUser,
   useDietary,
+  useAllRecipes,
   useUpdateCuisine,
   useUpdateDietary,
 } from "@/hooks/queries";
-import { validateAuth } from "@/services/api";
+import { Recipe, validateAuth } from "@/services/api";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
 function ProfilePage() {
   const { data: user, isLoading } = useCurrentUser();
+  const { data: recipes, isLoading: isLoadingRecipes } = useAllRecipes();
 
   return (
-    <div className="container mx-auto p-6">
-      <Card className="max-w-xl">
+    <div className="w-full p-6">
+      <Card className="w-full max-w-none">
         <CardHeader>
           <CardTitle>Profile</CardTitle>
         </CardHeader>
@@ -27,14 +29,13 @@ function ProfilePage() {
             <p className="pb-2 text-sm text-muted-foreground">
               Account details
             </p>
-            <span className="font-medium">
-              Email:{" "}
+            <div className="text-sm text-muted-foreground">
               {isLoading ? (
-                <Skeleton className="inline-block w-40 h-4.5" />
+                <Skeleton className="inline-block w-56 h-4" />
               ) : (
                 user?.email
               )}
-            </span>
+            </div>
           </div>
 
           <PreferenceEntry
@@ -47,6 +48,7 @@ function ProfilePage() {
             placeholder="Enter your dietary restrictions."
             type="dietary"
           />
+          <UserStats recipes={recipes} isLoading={isLoadingRecipes} />
         </CardContent>
       </Card>
     </div>
@@ -95,6 +97,72 @@ function PreferenceEntry({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function UserStats({
+  recipes,
+  isLoading,
+}: {
+  recipes?: Recipe[];
+  isLoading: boolean;
+}) {
+  const stats = useMemo(() => {
+    const list = recipes ?? [];
+    const totalRecipes = list.length;
+    const plannedRecipes = list.filter((recipe) => recipe.inPlan).length;
+    const totalIngredients = list.reduce(
+      (acc, recipe) => acc + (recipe.ingredients?.length ?? 0),
+      0,
+    );
+    const totalSteps = list.reduce(
+      (acc, recipe) => acc + (recipe.steps?.length ?? 0),
+      0,
+    );
+    const rated = list.filter((recipe) => Number.isFinite(recipe.rating));
+    const avgRating =
+      rated.length > 0
+        ? rated.reduce((acc, recipe) => acc + (recipe.rating ?? 0), 0) /
+          rated.length
+        : undefined;
+
+    return {
+      totalRecipes,
+      plannedRecipes,
+      totalIngredients,
+      totalSteps,
+      avgRating: avgRating ? avgRating.toFixed(1) : "-",
+    };
+  }, [recipes]);
+
+  return (
+    <div>
+      <p className="pb-2 text-sm text-muted-foreground">Your stats</p>
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard label="Recipes" value={stats.totalRecipes} />
+          <StatCard label="Planned" value={stats.plannedRecipes} />
+          <StatCard label="Ingredients" value={stats.totalIngredients} />
+          <StatCard label="Avg rating" value={stats.avgRating} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-lg border bg-card p-4 shadow-sm">
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <div className="text-2xl font-semibold">{value}</div>
     </div>
   );
 }
