@@ -104,6 +104,46 @@ export interface RecipeMatch {
 export type AIRecipe = Omit<Recipe, "id">;
 export type RecipeWritePayload = Omit<Recipe, "id">;
 
+function coerceStepTime(raw: unknown): number | undefined {
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return raw;
+  }
+  if (typeof raw === "string") {
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  if (raw && typeof raw === "object") {
+    const hoursValue = Number((raw as { hours?: unknown }).hours ?? 0);
+    const minutesValue = Number((raw as { minutes?: unknown }).minutes ?? 0);
+    if (Number.isFinite(hoursValue) || Number.isFinite(minutesValue)) {
+      return hoursValue * 60 + minutesValue;
+    }
+  }
+  return undefined;
+}
+
+function normalizeRecipeWritePayload(
+  payload: RecipeWritePayload,
+): RecipeWritePayload {
+  return {
+    ...payload,
+    rating: payload.rating ?? 0,
+    inPlan: payload.inPlan ?? false,
+    ingredients: (payload.ingredients ?? []).map((item, index) => ({
+      id: Number.isFinite(item.id) ? item.id : index,
+      name: item.name ?? "",
+      amount: Number.isFinite(item.amount) ? item.amount : 1,
+      unit: item.unit ?? IngredientUnit.unit,
+    })),
+    steps: (payload.steps ?? []).map((item, index) => ({
+      id: Number.isFinite(item.id) ? item.id : index,
+      type: item.type ?? RecipeStepType.untimed,
+      description: item.description ?? "",
+      time: coerceStepTime(item.time),
+    })),
+  };
+}
+
 export interface AIRecipeRequest {
   ingredients: string[] | string;
   max_recipes?: number;
@@ -256,7 +296,7 @@ export function useAddRecipe() {
     useOptimisticMutation(
       {
         mutationFn: (fields: RecipeWritePayload) =>
-          api.post<Recipe>("/recipes/", fields),
+          api.post<Recipe>("/recipes/", normalizeRecipeWritePayload(fields)),
         onError(error) {
           toast.error("Failed to add recipe", { description: error.message });
         },
@@ -329,7 +369,7 @@ export function useUpdateRecipe() {
   const { mutate: updateRecipe } = useOptimisticMutation(
     {
       mutationFn: ({ id, ...rest }: Recipe) =>
-        api.put<Recipe>(`/recipes/${id}`, rest),
+        api.put<Recipe>(`/recipes/${id}`, normalizeRecipeWritePayload(rest)),
       onError(error) {
         toast.error("Failed to update recipe", { description: error.message });
       },
