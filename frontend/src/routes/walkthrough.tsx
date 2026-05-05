@@ -26,7 +26,8 @@ import {
   findSoonestTimerChainIdx,
   walkthroughChainAtom,
 } from "@/state/walkthrough";
-import { createFileRoute } from "@tanstack/react-router";
+import { useUpdateRecipe } from "@/hooks/queries";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
 import { useEffect, useId } from "react";
 
@@ -159,26 +160,90 @@ function WalkthroughPage() {
 
 function InstructionColumn() {
   const chains = useAtomValue(walkthroughChainAtom);
+  const setChains = useSetAtom(walkthroughChainAtom);
+  const { updateRecipe } = useUpdateRecipe();
+  const navigate = useNavigate();
   const currentChain = chains.find((it) => it.isCurrent);
   const timeRemaining = useTimeRemaining(currentChain);
   const step = currentChain?.recipe.steps[currentChain.currentStep];
+  const canGoBack = Boolean(currentChain && currentChain.currentStep > 0);
+  const isLastStep =
+    currentChain &&
+    currentChain.currentStep === currentChain.recipe.steps.length - 1;
+  const hasRemainingChains = currentChain
+    ? chains.some(
+        (it) =>
+          it.recipe.id !== currentChain.recipe.id &&
+          it.currentStep < it.recipe.steps.length,
+      )
+    : false;
+  const isFinalWalkthroughStep = Boolean(isLastStep && !hasRemainingChains);
   const mayNotAdvance = (timeRemaining ?? 0) > 0;
   const advance = useAdvance();
+
+  const handleComplete = () => {
+    if (!currentChain) return;
+    updateRecipe({ ...currentChain.recipe, inPlan: false });
+    setChains([]);
+    void navigate({ to: "/home" });
+  };
+
+  const handleBack = () => {
+    if (!currentChain || currentChain.currentStep <= 0) return;
+    const previousStep =
+      currentChain.recipe.steps[currentChain.currentStep - 1];
+    const previousStepTime = previousStep.time ?? DEFAULT_TIME_ESTIMATE;
+    setChains((prev) => {
+      const idx = prev.findIndex(
+        (it) => it.recipe.id === currentChain.recipe.id,
+      );
+      if (idx < 0) return prev;
+      return prev.with(idx, {
+        ...prev[idx],
+        currentStep: prev[idx].currentStep - 1,
+        estimatedTime: prev[idx].estimatedTime + previousStepTime,
+        endTime: undefined,
+      });
+    });
+  };
   return (
     <div className="w-full p-16 flex flex-col gap-4 items-center overflow-hidden">
       <h1 className="h-full text-7xl">{step?.description}</h1>
       <div className="h-full text-9xl text-center flex flex-col items-center justify-center">
         {timeRemaining && formatTime(timeRemaining)}
       </div>
-      <Button
-        variant="default"
-        size="lg"
-        className="w-3/4 h-16 text-3xl cursor-pointer"
-        disabled={mayNotAdvance}
-        onClick={() => advance()}
-      >
-        Move on!
-      </Button>
+      <div className="w-3/4 flex gap-4">
+        <Button
+          variant="outline"
+          size="lg"
+          className="h-16 text-3xl cursor-pointer flex-1"
+          disabled={!canGoBack}
+          onClick={handleBack}
+        >
+          Back
+        </Button>
+        {isFinalWalkthroughStep ? (
+          <Button
+            variant="default"
+            size="lg"
+            className="h-16 text-3xl cursor-pointer flex-[2]"
+            disabled={mayNotAdvance}
+            onClick={handleComplete}
+          >
+            Complete
+          </Button>
+        ) : (
+          <Button
+            variant="default"
+            size="lg"
+            className="h-16 text-3xl cursor-pointer flex-[2]"
+            disabled={mayNotAdvance}
+            onClick={() => advance()}
+          >
+            Move on!
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
